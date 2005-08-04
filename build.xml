@@ -296,6 +296,7 @@
             <classpath refid="id.classpath" />
             <include name="**/org/apache/xml/security/**/*.java" />
             <include name="**/javax/xml/crypto/**/*.java" />
+            <include name="**/org/jcp/xml/dsig/internal/**/*.java" />
         </javac >
 
         <copy todir="${dir.build.bin}" >
