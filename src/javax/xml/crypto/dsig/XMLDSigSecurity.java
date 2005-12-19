@@ -59,7 +59,7 @@ final class XMLDSigSecurity {
      * either the direct engine property or a matching alias.
      */
     private static ProviderProperty getEngineClassName(String alg, 
-	Map.Entry attr, String engineType, boolean mech) 
+	Map.Entry attr, String engineType, String key, boolean mech) 
 	throws NoSuchAlgorithmException
     {
 	// get all currently installed providers
@@ -72,7 +72,7 @@ final class XMLDSigSecurity {
         for (int i = 0; (i < provs.length) && (!found); i++) {
             try {
                 entry = getEngineClassName
-		    (alg, attr, engineType, provs[i], mech);
+		    (alg, attr, engineType, key, provs[i], mech);
                 found = true;
             } catch (Exception e) {
 	        // do nothing, check the next provider
@@ -94,10 +94,9 @@ final class XMLDSigSecurity {
      * The parameter provider cannot be null.
      */
     private static ProviderProperty getEngineClassName(String alg,
-	Map.Entry attr, String engineType, Provider provider, boolean mech)
-	throws NoSuchAlgorithmException
+	Map.Entry attr, String engineType, String key, Provider provider, 
+	boolean mech) throws NoSuchAlgorithmException
     {
-	String key = engineType + "." + alg;
 	String className = getProviderProperty(key, attr, provider);
 	if (className == null) {
             // try alg as alias name
@@ -126,13 +125,7 @@ final class XMLDSigSecurity {
     } 
                                           
     private static boolean checkSuperclass(Class subclass, Class superclass) {
-	while(!subclass.equals(superclass)) {
-	    subclass = subclass.getSuperclass();
-	    if (subclass == null) {
-		return false;
-	    }
-	}
-	return true;
+	return superclass.isAssignableFrom(subclass);
     }
 
     /*
@@ -161,12 +154,14 @@ final class XMLDSigSecurity {
 	    typeClass = javax.xml.crypto.dsig.TransformService.class;
 	    m = false;
 	}
+	String key = type + "." + alg;
         if (provider == null) {
             return doGetImpl
-		(type, typeClass, getEngineClassName(alg, attr, type, m), m);
+		(type, typeClass, 
+		 getEngineClassName(alg, attr, type, key, m), m);
         } else {
             return doGetImpl
-		(type, typeClass, getEngineClassName(alg, attr, type, 
+		(type, typeClass, getEngineClassName(alg, attr, type, key,
 		 provider, m), m);
         }
     }
