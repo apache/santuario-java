@@ -61,7 +61,8 @@ public final class XPathFilter2ParameterSpec implements TransformParameterSpec {
 	if (xPathListCopy.isEmpty()) {
 	    throw new IllegalArgumentException("xPathList cannot be empty");
 	}
-        for (int i = 0; i < xPathListCopy.size(); i++) {
+        int size = xPathListCopy.size();
+        for (int i = 0; i < size; i++) {
             if (!(xPathListCopy.get(i) instanceof XPathType)) {
                 throw new ClassCastException
                     ("xPathList["+i+"] is not a valid type");
