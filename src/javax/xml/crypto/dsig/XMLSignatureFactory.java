@@ -34,16 +34,11 @@ import javax.xml.crypto.dsig.spec.*;
 import javax.xml.crypto.dsig.dom.DOMValidateContext;
 import javax.xml.crypto.dsig.dom.DOMSignContext;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.security.AccessController;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.PrivilegedAction;
 import java.security.Provider;
 import java.security.Security;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -149,28 +144,6 @@ public abstract class XMLSignatureFactory {
     private String mechanismType;
     private Provider provider;
 
-    private static Class cl;
-    private static final Class[] getImplParams =
-	{ String.class, String.class, Provider.class };
-    private static Method getImplMethod;
-    static {
-	try {
-            cl = Class.forName("javax.xml.crypto.dsig.XMLDSigSecurity");
-	} catch (ClassNotFoundException cnfe) { }
-	getImplMethod = (Method)
-            AccessController.doPrivileged(new PrivilegedAction() {
-                public Object run() {
-		    Method m = null;
-		    try {
-                        m = cl.getDeclaredMethod("getImpl", getImplParams);
-                        if (m != null)
-                            m.setAccessible(true);
-		    } catch (NoSuchMethodException nsme) { }
-		    return m;
-                }
-	    });
-    }
-
     /**
      * Default constructor, for invocation by subclasses.
      */
@@ -215,21 +188,13 @@ public abstract class XMLSignatureFactory {
     private static XMLSignatureFactory findInstance(String mechanismType,
 	Provider provider) {
 
-	if (getImplMethod == null) {
-	    throw new NoSuchMechanismException
-		("Cannot find " + mechanismType + " mechanism type");
-	}
-
 	Object[] objs = null;
 	try {
-	    objs = (Object[]) getImplMethod.invoke(null, new Object[]
-		{mechanismType, "XMLSignatureFactory", provider});
-	} catch (IllegalAccessException iae) {
+	    objs = (Object[]) XMLDSigSecurity.getImpl
+		(mechanismType, "XMLSignatureFactory", provider);
+	} catch (NoSuchAlgorithmException nsae) {
 	    throw new NoSuchMechanismException
-		("Cannot find " + mechanismType + " mechanism type", iae);
-	} catch (InvocationTargetException ite) {
-	    throw new NoSuchMechanismException
-		("Cannot find " + mechanismType + " mechanism type", ite);
+		("Cannot find " + mechanismType + " mechanism type", nsae);
 	}
 
 	XMLSignatureFactory factory = (XMLSignatureFactory) objs[0];
