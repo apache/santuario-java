@@ -25,7 +25,6 @@ package javax.xml.crypto.dsig.spec;
 import javax.xml.crypto.dsig.CanonicalizationMethod;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -86,9 +85,8 @@ public final class ExcC14NParameterSpec implements C14NMethodParameterSpec {
 	    throw new NullPointerException("prefixList cannot be null");
 	}
 	this.preList = new ArrayList(prefixList);
-	Iterator i = preList.iterator();
-	while (i.hasNext()) {
-	    if (!(i.next() instanceof String)) {
+        for (int i = 0, size = preList.size(); i < size; i++) {
+            if (!(preList.get(i) instanceof String)) {
 		throw new ClassCastException("not a String");
 	    }
 	}
