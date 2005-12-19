@@ -22,13 +22,9 @@
  */
 package javax.xml.crypto.dsig;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.security.AccessController;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.PrivilegedAction;
 import java.security.Provider;
 import java.security.Security;
 import java.util.*;
@@ -107,28 +103,6 @@ public abstract class TransformService implements Transform {
     private String algorithm;
     private String mechanism;
     private Provider provider;
-
-    private static Class cl;
-    private static final Class[] getImplParams =
-        { String.class, Map.Entry.class, String.class, Provider.class };
-    private static Method getImplMethod;
-    static {
-        try {
-            cl = Class.forName("javax.xml.crypto.dsig.XMLDSigSecurity");
-        } catch (ClassNotFoundException cnfe) { }
-        getImplMethod = (Method)
-            AccessController.doPrivileged(new PrivilegedAction() {
-                public Object run() {
-                    Method m = null;
-                    try {
-                        m = cl.getDeclaredMethod("getImpl", getImplParams);
-                        if (m != null)
-                            m.setAccessible(true);
-                    } catch (NoSuchMethodException nsme) { }
-                    return m;
-                }
-            });
-    }
 
     /**
      * Default constructor, for invocation by subclasses.
@@ -243,23 +217,9 @@ public abstract class TransformService implements Transform {
 	String mechanismType, Provider provider) 
 	throws NoSuchAlgorithmException {
 
-        if (getImplMethod == null) {
-            throw new NoSuchAlgorithmException
-                ("Cannot find + algorithm:" + algorithm);
-        }
-
-        Object[] objs = null;
-        try {
-            objs = (Object[]) getImplMethod.invoke(null, new Object[]
-                {algorithm, new MechanismMapEntry(algorithm, mechanismType), 
-		 "TransformService", provider});
-        } catch (IllegalAccessException iae) {
-            throw (NoSuchAlgorithmException) new NoSuchAlgorithmException
-                ("Cannot find algorithm:" + algorithm).initCause(iae);
-        } catch (InvocationTargetException ite) {
-            throw (NoSuchAlgorithmException) new NoSuchAlgorithmException
-                ("Cannot find algorithm:" + algorithm).initCause(ite);
-        }
+	Object[] objs = (Object[]) XMLDSigSecurity.getImpl
+	    (algorithm, new MechanismMapEntry(algorithm, mechanismType),
+	    "TransformService", provider);
 
         TransformService spi = (TransformService) objs[0];
         spi.mechanism = mechanismType;
@@ -271,9 +231,11 @@ public abstract class TransformService implements Transform {
     private static class MechanismMapEntry implements Map.Entry {
 	private final String mechanism;
 	private final String algorithm;
+	private final String key;
 	MechanismMapEntry(String algorithm, String mechanism) {
 	    this.algorithm = algorithm;
 	    this.mechanism = mechanism;
+	    this.key = "TransformService." + algorithm + " MechanismType";
 	}
 	public boolean equals(Object o) {
 	    if (!(o instanceof Map.Entry)) {
@@ -286,7 +248,7 @@ public abstract class TransformService implements Transform {
       		    e.getValue()==null : getValue().equals(e.getValue()));
 	}
 	public Object getKey() {
-	    return "TransformService." + algorithm + " MechanismType";
+	    return key;
 	}
 	public Object getValue() {
 	    return mechanism;
