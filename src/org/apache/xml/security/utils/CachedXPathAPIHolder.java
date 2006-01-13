@@ -24,9 +24,16 @@ import org.w3c.dom.Document;
  * @author Raul Benito
  */
 public class CachedXPathAPIHolder {
+	 static org.apache.commons.logging.Log log = 
+	        org.apache.commons.logging.LogFactory.getLog(CachedXPathAPIHolder.class.getName());
+
     static ThreadLocal  local=new ThreadLocal();
     static ThreadLocal localDoc=new ThreadLocal();
   
+	/**
+	 * Sets the doc for the xpath transformation. Resets the cache if needed
+	 * @param doc
+	 */
 	public static void setDoc(Document doc) {                    
        if (localDoc.get()!=doc) {
             CachedXPathAPI cx=(CachedXPathAPI)local.get();
@@ -42,7 +49,7 @@ public class CachedXPathAPIHolder {
         }		
 	}
     /**
-     * @return
+     * @return the cachexpathapi for this thread
      */
     public static CachedXPathAPI getCachedXPathAPI() {        
         CachedXPathAPI cx=(CachedXPathAPI)local.get();        

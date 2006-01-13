@@ -1,4 +1,3 @@
-
 /*
  * Copyright  1999-2004 The Apache Software Foundation.
  *
@@ -17,21 +16,18 @@
  */
 package org.apache.xml.security.utils.resolver;
 
-
-
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 
 import org.apache.xml.security.signature.XMLSignatureInput;
 import org.w3c.dom.Attr;
-
 
 /**
  * During reference validation, we have to retrieve resources from somewhere.
  * This is done by retrieving a Resolver. The resolver needs two arguments: The
  * URI in which the link to the new resource is defined and the BaseURI of the
- * file/entity in which the URI occurs (the BaseURI is the same as the SystemId
- * for {@link javax.xml.transform.stream.StreamSource#getSystemId}.
+ * file/entity in which the URI occurs (the BaseURI is the same as the SystemId.
  *
  * <UL xml:lang="DE" LANG="DE">
  * <LI> Verschiedene Implementierungen k??nnen sich als Resolver registrieren.
@@ -56,10 +52,10 @@ public class ResourceResolver {
    static boolean _alreadyInitialized = false;
 
    /** these are the system-wide resolvers */
-   static Vector _resolverVector = null;
+   static List _resolverVector = null;
 
    /** Field _individualResolverVector */
-   Vector _individualResolverVector = null;
+   List _individualResolverVector = null;
 
    /** Field transformSpi */
    protected ResourceResolverSpi _resolverSpi = null;
@@ -93,31 +89,20 @@ public class ResourceResolver {
     *
     * @param uri
     * @param BaseURI
-    * @return
+    * @return the instnace
     *
     * @throws ResourceResolverException
     */
    public static final ResourceResolver getInstance(Attr uri, String BaseURI)
            throws ResourceResolverException {
-
-      for (int i = 0; i < ResourceResolver._resolverVector.size(); i++) {
-         String currentClass =
-            (String) ResourceResolver._resolverVector.elementAt(i);
-         ResourceResolver resolver = null;
-
-         try {
-            resolver = new ResourceResolver(currentClass);
-         } catch (Exception e) {
-            Object exArgs[] = { ((uri != null)
-                                 ? uri.getNodeValue()
-                                 : "null"), BaseURI };
-
-            throw new ResourceResolverException("utils.resolver.noClass",
-                                                exArgs, e, uri, BaseURI);
-         }
+      int length=ResourceResolver._resolverVector.size();
+      for (int i = 0; i < length; i++) {
+		  ResourceResolver resolver =
+            (ResourceResolver) ResourceResolver._resolverVector.get(i);
+         
 
          if (log.isDebugEnabled())
-         	log.debug("check resolvability by class " + currentClass);
+         	log.debug("check resolvability by class " + resolver._resolverSpi.getClass().getName());
 
          if ((resolver != null) && resolver.canResolve(uri, BaseURI)) {
             return resolver;
@@ -131,19 +116,18 @@ public class ResourceResolver {
       throw new ResourceResolverException("utils.resolver.noClass", exArgs,
                                           uri, BaseURI);
    }
-
    /**
     * Method getInstance
     *
     * @param uri
     * @param BaseURI
     * @param individualResolvers
-    * @return
+    * @return the instance
     *
     * @throws ResourceResolverException
     */
    public static final ResourceResolver getInstance(
-           Attr uri, String BaseURI, Vector individualResolvers)
+           Attr uri, String BaseURI, List individualResolvers)
               throws ResourceResolverException {
       if (log.isDebugEnabled()) {
       	log.debug("I was asked to create a ResourceResolver and got " + individualResolvers.size());
@@ -151,10 +135,11 @@ public class ResourceResolver {
       }
 
       // first check the individual Resolvers
-      if ((individualResolvers != null) && (individualResolvers.size() > 0)) {
-         for (int i = 0; i < individualResolvers.size(); i++) {
+	  int size=0;
+      if ((individualResolvers != null) && ((size=individualResolvers.size()) > 0)) {
+         for (int i = 0; i < size; i++) {
             ResourceResolver resolver =
-               (ResourceResolver) individualResolvers.elementAt(i);
+               (ResourceResolver) individualResolvers.get(i);
 
             if (resolver != null) {
                String currentClass = resolver._resolverSpi.getClass().getName();
@@ -168,35 +153,7 @@ public class ResourceResolver {
          }
       }
 
-      for (int i = 0; i < ResourceResolver._resolverVector.size(); i++) {
-         String currentClass =
-            (String) ResourceResolver._resolverVector.elementAt(i);
-         ResourceResolver resolver = null;
-
-         try {
-            resolver = new ResourceResolver(currentClass);
-         } catch (Exception e) {
-            Object exArgs[] = { ((uri != null)
-                                 ? uri.getNodeValue()
-                                 : "null"), BaseURI };
-
-            throw new ResourceResolverException("utils.resolver.noClass",
-                                                exArgs, e, uri, BaseURI);
-         }
-         if (log.isDebugEnabled())
-         	log.debug("check resolvability by class " + currentClass);
-
-         if ((resolver != null) && resolver.canResolve(uri, BaseURI)) {
-            return resolver;
-         }
-      }
-
-      Object exArgs[] = { ((uri != null)
-                           ? uri.getNodeValue()
-                           : "null"), BaseURI };
-
-      throw new ResourceResolverException("utils.resolver.noClass", exArgs,
-                                          uri, BaseURI);
+	  return getInstance(uri,BaseURI);
    }
 
    /**
@@ -205,35 +162,55 @@ public class ResourceResolver {
    public static void init() {
 
       if (!ResourceResolver._alreadyInitialized) {
-         ResourceResolver._resolverVector = new Vector(10);
+         ResourceResolver._resolverVector = new ArrayList(10);
          _alreadyInitialized = true;
       }
    }
 
-   /**
-    * Method register
-    *
-    * @param className
-    */
-   public static void register(String className) {
-      ResourceResolver._resolverVector.add(className);
-   }
+    /**
+     * Registers a ResourceResolverSpi class. This method logs a warning if
+     * the class cannot be registered.
+     *
+     * @param className the name of the ResourceResolverSpi class to be 
+     *    registered
+     */
+    public static void register(String className) {
+ 	register(className, false);
+    }
 
-   /**
-    * Method registerAtStart
-    *
-    * @param className
-    */
-   public static void registerAtStart(String className) {
-      ResourceResolver._resolverVector.add(0, className);
-   }
+    /**
+     * Registers a ResourceResolverSpi class at the beginning of the provider
+     * list. This method logs a warning if the class cannot be registered.
+     *
+     * @param className the name of the ResourceResolverSpi class to be 
+     *    registered
+     */
+    public static void registerAtStart(String className) {
+	register(className, true);
+    }
+
+    private static void register(String className, boolean start) {
+        try {
+            ResourceResolver resolver = new ResourceResolver(className);
+	    if (start) {
+	        ResourceResolver._resolverVector.add(0, resolver);
+	        log.debug("registered resolver");
+	    } else {
+	        ResourceResolver._resolverVector.add(resolver);
+	    }
+        } catch (Exception e) {
+	    log.warn("Error loading resolver " + className +" disabling it");
+        } catch (NoClassDefFoundError e) {
+	    log.warn("Error loading resolver " + className +" disabling it");
+        }
+    }
 
    /**
     * Method resolve
     *
     * @param uri
     * @param BaseURI
-    * @return
+    * @return the resource
     *
     * @throws ResourceResolverException
     */
@@ -250,7 +227,7 @@ public class ResourceResolver {
     *
     * @param uri
     * @param BaseURI
-    * @return
+    * @return the resource
     *
     * @throws ResourceResolverException
     */
@@ -273,7 +250,7 @@ public class ResourceResolver {
     * Method getProperty
     *
     * @param key
-    * @return
+    * @return the value of the property
     */
    public String getProperty(String key) {
       return this._resolverSpi.engineGetProperty(key);
@@ -291,7 +268,7 @@ public class ResourceResolver {
    /**
     * Method getPropertyKeys
     *
-    * @return
+    * @return all property keys.
     */
    public String[] getPropertyKeys() {
       return this._resolverSpi.engineGetPropertyKeys();
@@ -301,7 +278,7 @@ public class ResourceResolver {
     * Method understandsProperty
     *
     * @param propertyToTest
-    * @return
+    * @return true if the resolver understands the property
     */
    public boolean understandsProperty(String propertyToTest) {
       return this._resolverSpi.understandsProperty(propertyToTest);
@@ -312,7 +289,7 @@ public class ResourceResolver {
     *
     * @param uri
     * @param BaseURI
-    * @return
+    * @return true if it can resolve the uri
     */
    private boolean canResolve(Attr uri, String BaseURI) {
       return this._resolverSpi.engineCanResolve(uri, BaseURI);

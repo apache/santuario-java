@@ -62,7 +62,6 @@ public final class DOMCryptoBinary extends DOMStructure {
             throw new NullPointerException("bigNum is null");
         }
         this.bigNum = bigNum;
-        byte[] bigNumAsBytes = bigNum.toByteArray();
         // convert to bitstring
         value = Base64.encode(bigNum);
     }

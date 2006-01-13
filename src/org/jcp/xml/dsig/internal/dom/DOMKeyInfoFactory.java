@@ -25,8 +25,6 @@ package org.jcp.xml.dsig.internal.dom;
 import java.math.BigInteger;
 import java.security.*;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.xml.crypto.*;
 import javax.xml.crypto.dsig.*;
 import javax.xml.crypto.dom.*;
@@ -41,8 +39,6 @@ import org.w3c.dom.Node;
  * @author Sean Mullan
  */
 public final class DOMKeyInfoFactory extends KeyInfoFactory {
-
-    static Logger log = Logger.getLogger(DOMKeyInfoFactory.class.getName());
 
     static {
         AccessController.doPrivileged(new PrivilegedAction() {
@@ -141,7 +137,6 @@ public final class DOMKeyInfoFactory extends KeyInfoFactory {
             throw new MarshalException("Document implementation must " +
                 "support DOM Level 2 and be namespace aware");
         }
-        log.log(Level.FINE, "unmarshalling element: " + tag );
         if (tag.equals("KeyInfo")) {
             return new DOMKeyInfo(element, null);
         } else {

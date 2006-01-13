@@ -66,7 +66,7 @@ public class DOMURIDereferencer implements URIDereferencer {
         DOMCryptoContext dcc = (DOMCryptoContext) context;
 
 	// Check if same-document URI and register ID
-	if (uri != null && uri.startsWith("#")) {
+	if (uri != null && uri.length() != 0 && uri.charAt(0) == '#') {
             String id = uri.substring(1);
 
 	    if (id.startsWith("xpointer(id(")) {
@@ -87,10 +87,10 @@ public class DOMURIDereferencer implements URIDereferencer {
 	} 
 
         try {
+	    String baseURI = context.getBaseURI();
             ResourceResolver apacheResolver = 
-	        ResourceResolver.getInstance(uriAttr, context.getBaseURI());
-            XMLSignatureInput in = 
-	        apacheResolver.resolve(uriAttr, context.getBaseURI());
+	        ResourceResolver.getInstance(uriAttr, baseURI);
+            XMLSignatureInput in = apacheResolver.resolve(uriAttr, baseURI);
 	    if (in.isOctetStream()) {
 	        return new ApacheOctetStreamData(in);
 	    } else {

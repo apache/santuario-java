@@ -71,11 +71,17 @@ public final class DOMExcC14NMethod extends ApacheCanonicalizer {
     private void unmarshalParams(Element paramsElem) {
 	String prefixListAttr = paramsElem.getAttributeNS(null, "PrefixList");
 	this.inclusiveNamespaces = prefixListAttr;
-	StringTokenizer tokenizer = new StringTokenizer(prefixListAttr, " ");
-	List prefixList = new ArrayList(tokenizer.countTokens()); 
-	for (int i = 0; tokenizer.hasMoreTokens(); i++) {
-	    prefixList.add(tokenizer.nextToken());
+	int begin = 0;
+	int end = prefixListAttr.indexOf(' ');
+	List prefixList = new ArrayList();
+	while (end != -1) {
+	    prefixList.add(prefixListAttr.substring(begin, end));
+	    begin = end + 1;
+	    end = prefixListAttr.indexOf(' ', begin);
 	}
+	if (begin <= prefixListAttr.length()) {
+            prefixList.add(prefixListAttr.substring(begin));
+        }
 	this.params = new ExcC14NParameterSpec(prefixList);
     }
 
@@ -103,10 +109,10 @@ public final class DOMExcC14NMethod extends ApacheCanonicalizer {
 
 	ExcC14NParameterSpec params = (ExcC14NParameterSpec) spec;
 	StringBuffer prefixListAttr = new StringBuffer("");
-	Iterator i = params.getPrefixList().iterator();
-	while (i.hasNext()) {
-	    prefixListAttr.append((String) i.next());
-	    if (i.hasNext()) {
+	List prefixList = params.getPrefixList();
+	for (int i = 0, size = prefixList.size(); i < size; i++) {
+	    prefixListAttr.append((String) prefixList.get(i));
+	    if (i < size - 1) {
 		prefixListAttr.append(" ");
 	    }
 	}
@@ -125,9 +131,9 @@ public final class DOMExcC14NMethod extends ApacheCanonicalizer {
 	// ignore comments if dereferencing same-document URI that require
 	// you to omit comments, even if the Transform says otherwise -
 	// this is to be compliant with section 4.3.3.3 of W3C Rec.
-	if (data instanceof SubDocumentData) {
-	    SubDocumentData sdd = (SubDocumentData) data;
-	    if (!sdd.withComments()) {
+	if (data instanceof DOMSubTreeData) {
+	    DOMSubTreeData subTree = (DOMSubTreeData) data;
+	    if (subTree.excludeComments()) {
 		try {
                     apacheCanonicalizer = Canonicalizer.getInstance
 			(CanonicalizationMethod.EXCLUSIVE);

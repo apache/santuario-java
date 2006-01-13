@@ -892,21 +892,34 @@ public class XMLCipher {
      * Returns an <code>EncryptedData</code> interface. Use this operation if
      * you want to have full control over the contents of the
      * <code>EncryptedData</code> structure.
-	 *
-	 * This does not change the source document in any way.
+     *
+     * this does not change the source document in any way.
      *
      * @param context the context <code>Document</code>.
      * @param element the <code>Element</code> that will be encrypted.
-     * @return
+     * @return the <code>EncryptedData</code>
      * @throws Exception
      */
-
     public EncryptedData encryptData(Document context, Element element) throws 
             /* XMLEncryption */Exception {
 	return encryptData(context, element, false);
     }
 
-    private EncryptedData encryptData(Document context, Element element, boolean contentMode) throws
+    /**
+     * Returns an <code>EncryptedData</code> interface. Use this operation if
+     * you want to have full control over the contents of the
+     * <code>EncryptedData</code> structure.
+     *
+     * this does not change the source document in any way.
+     *
+     * @param context the context <code>Document</code>.
+     * @param element the <code>Element</code> that will be encrypted.
+     * @param contentMode <code>true</code> to encrypt element's content only,
+     *    <code>false</code> otherwise
+     * @return the <code>EncryptedData</code>
+     * @throws Exception
+     */
+    public EncryptedData encryptData(Document context, Element element, boolean contentMode) throws
             /* XMLEncryption */ Exception {
 		logger.debug("Encrypting element...");
 		if (null == context)
@@ -1272,7 +1285,7 @@ public class XMLCipher {
 			throw new XMLEncryptionException("empty", nsae);
 		}
 
-		logger.info("Decryption of key type " + algorithm + " OK");
+		logger.debug("Decryption of key type " + algorithm + " OK");
 
 		return ret;
 
@@ -2552,30 +2565,21 @@ public class XMLCipher {
             ReferenceList result = new ReferenceListImpl(type);
             NodeList list = null;
             switch (type) {
-                case ReferenceList.DATA_REFERENCE:
+            case ReferenceList.DATA_REFERENCE:
                 list = element.getElementsByTagNameNS(
                     EncryptionConstants.EncryptionSpecNS, 
                     EncryptionConstants._TAG_DATAREFERENCE);
                 for (int i = 0; i < list.getLength() ; i++) {
-                    String uri = null;
-                    try {
-                        uri = new URI(
-                            ((Element) list.item(0)).getNodeValue()).toString();
-                    } catch (URI.MalformedURIException mfue) {
-                    }
+		    String uri = ((Element) list.item(i)).getAttribute("URI");
                     result.add(result.newDataReference(uri));
                 }
-                case ReferenceList.KEY_REFERENCE:
+		break;
+            case ReferenceList.KEY_REFERENCE:
                 list = element.getElementsByTagNameNS(
                     EncryptionConstants.EncryptionSpecNS, 
                     EncryptionConstants._TAG_KEYREFERENCE);
                 for (int i = 0; i < list.getLength() ; i++) {
-                    String uri = null;
-                    try {
-                        uri = new URI(
-                            ((Element) list.item(0)).getNodeValue()).toString();
-                    } catch (URI.MalformedURIException mfue) {
-                    }
+                    String uri = ((Element) list.item(i)).getAttribute("URI");
                     result.add(result.newKeyReference(uri));
                 }
             }
@@ -3249,11 +3253,13 @@ public class XMLCipher {
                         getReferenceList()).toElement());
                 }
                 if (null != carriedName) {
-                    result.appendChild(
-                        ElementProxy.createElementForFamily(_contextDocument, 
-                            EncryptionConstants.EncryptionSpecNS, 
-                            EncryptionConstants._TAG_CARRIEDKEYNAME).appendChild(
-                            _contextDocument.createTextNode(carriedName)));
+                    Element element = ElementProxy.createElementForFamily(
+			_contextDocument, 
+                        EncryptionConstants.EncryptionSpecNS, 
+                        EncryptionConstants._TAG_CARRIEDKEYNAME);
+                    Node node = _contextDocument.createTextNode(carriedName);
+                    element.appendChild(node);
+                    result.appendChild(element);
                 }
 
                 return (result);

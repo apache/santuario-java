@@ -53,9 +53,9 @@ public final class DOMCanonicalXMLC14NMethod extends ApacheCanonicalizer {
         // ignore comments if dereferencing same-document URI that requires
 	// you to omit comments, even if the Transform says otherwise -
         // this is to be compliant with section 4.3.3.3 of W3C Rec.
-	if (data instanceof SubDocumentData) {
-	    SubDocumentData sdd = (SubDocumentData) data;
-	    if (!sdd.withComments()) {
+	if (data instanceof DOMSubTreeData) {
+	    DOMSubTreeData subTree = (DOMSubTreeData) data;
+	    if (subTree.excludeComments()) {
                 try {
                     apacheCanonicalizer = Canonicalizer.getInstance
 			(CanonicalizationMethod.INCLUSIVE);

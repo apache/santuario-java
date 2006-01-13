@@ -40,7 +40,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.w3c.dom.Element;
 
-import org.apache.xml.security.utils.Base64;
+import org.jcp.xml.dsig.internal.SignerOutputStream;
 
 /**
  * DOM-based implementation of SignatureMethod for DSA algorithm.
@@ -50,8 +50,7 @@ import org.apache.xml.security.utils.Base64;
  */
 public final class DOMDSASignatureMethod extends DOMSignatureMethod { 
 
-    static Logger log = Logger.getLogger(DOMDSASignatureMethod.class.getName());
-
+    private static Logger log = Logger.getLogger("org.jcp.xml.dsig.internal.dom");
     private Signature signature;
 
     /**
@@ -102,12 +101,15 @@ public final class DOMDSASignatureMethod extends DOMSignatureMethod {
 	return (getParameterSpec() == spec);
     }
 
-    public boolean verify(Key key, byte[] data, byte[] sig) 
-	throws InvalidKeyException, SignatureException {
+    public boolean verify(Key key, DOMSignedInfo si, byte[] sig,
+	XMLValidateContext context) 
+	throws InvalidKeyException, SignatureException, XMLSignatureException {
 	if (key == null) {
 	    throw new NullPointerException("key cannot be null");
 	} else if (sig == null) {
 	    throw new NullPointerException("signature cannot be null");
+	} else if (si == null) {
+	    throw new NullPointerException("signedInfo cannot be null");
 	}
 	if (signature == null) {
 	    try {
@@ -121,18 +123,22 @@ public final class DOMDSASignatureMethod extends DOMSignatureMethod {
 	        throw new InvalidKeyException("key must be PublicKey");
             }
             signature.initVerify((PublicKey) key);
-            signature.update(data);
-            log.log(Level.FINE, "verifying data: " + Base64.encode(data));
-            log.log(Level.FINE, "verifying with key: " + key);
-            return signature.verify(convertXMLDSIGtoASN1(sig) );  
+	    si.canonicalize(context, new SignerOutputStream(signature));
+
+	    // avoid overhead of converting key to String unless necessary
+            if (log.isLoggable(Level.FINE)) {
+                log.log(Level.FINE, "verifying with key: " + key);
+	    }
+            return signature.verify(convertXMLDSIGtoASN1(sig));  
         } catch (IOException ioex) {
 	    // should never occur!
 	    throw new RuntimeException(ioex.getMessage());
 	}
     }
 
-    public byte[] sign(Key key, byte[] data) throws InvalidKeyException {
-	if (key == null || data == null) {
+    public byte[] sign(Key key, DOMSignedInfo si, XMLSignContext context) 
+	throws InvalidKeyException, XMLSignatureException {
+	if (key == null || si == null) {
 	    throw new NullPointerException();
 	}
 
@@ -146,12 +152,16 @@ public final class DOMDSASignatureMethod extends DOMSignatureMethod {
 		throw new InvalidKeyException("SHA1withDSA Signature not found");
 	    }
 	}
-        log.log(Level.FINE, "Signing data: " + Base64.encode(data));
-        log.log(Level.FINE, "Signing with key: " + key);
+
+        // avoid overhead of converting key to String unless necessary
+        if (log.isLoggable(Level.FINE)) {
+            log.log(Level.FINE, "Signing with key: " + key);
+	}
         signature.initSign((PrivateKey) key);
+	si.canonicalize(context, new SignerOutputStream(signature));
+
         try {
-            signature.update(data);
-	    return convertASN1toXMLDSIG(signature.sign() );
+	    return convertASN1toXMLDSIG(signature.sign());
         } catch (SignatureException se) {
 	    // should never occur!
 	    throw new RuntimeException(se.getMessage());

@@ -19,7 +19,6 @@ package org.apache.xml.security.signature;
 
 
 
-import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashSet;
@@ -40,6 +39,7 @@ import org.apache.xml.security.utils.Constants;
 import org.apache.xml.security.utils.DigesterOutputStream;
 import org.apache.xml.security.utils.IdResolver;
 import org.apache.xml.security.utils.SignatureElementProxy;
+import org.apache.xml.security.utils.UnsyncBufferedOutputStream;
 import org.apache.xml.security.utils.XMLUtils;
 import org.apache.xml.security.utils.resolver.ResourceResolver;
 import org.apache.xml.security.utils.resolver.ResourceResolverException;
@@ -117,6 +117,12 @@ public class Reference extends SignatureElementProxy {
    XMLSignatureInput _transformsOutput;
    //J+
 
+private Transforms transforms;
+
+private Element digestMethodElem;
+
+private Element digestValueElement;
+
    /**
     * Constructor Reference
     *
@@ -126,8 +132,7 @@ public class Reference extends SignatureElementProxy {
     * @param manifest
     * @param transforms {@link Transforms} applied to data
     * @param messageDigestAlgorithm {@link MessageDigestAlgorithm Digest algorithm} which is applied to the data
-    * $todo$ should we throw XMLSignatureException if MessageDigestAlgoURI is wrong?
-    * @param cx for speed-up the xpath selections.
+    * TODO should we throw XMLSignatureException if MessageDigestAlgoURI is wrong?
     * @throws XMLSignatureException
     */
    protected Reference(Document doc, String BaseURI, String ReferenceURI, Manifest manifest, Transforms transforms, String messageDigestAlgorithm)
@@ -148,6 +153,7 @@ public class Reference extends SignatureElementProxy {
       // this._manifest.appendChild(this._doc.createTextNode("\n"));
 
       if (transforms != null) {
+    	  this.transforms=transforms;
          this._constructionElement.appendChild(transforms.getElement());
          XMLUtils.addReturnToElement(this._constructionElement);
       }
@@ -156,11 +162,12 @@ public class Reference extends SignatureElementProxy {
             MessageDigestAlgorithm.getInstance(this._doc,
                                                messageDigestAlgorithm);
 
-         this._constructionElement.appendChild(mda.getElement());
+         digestMethodElem=mda.getElement();
+         this._constructionElement.appendChild(digestMethodElem);
          XMLUtils.addReturnToElement(this._constructionElement);
       }
       {
-         Element digestValueElement =
+         digestValueElement =
             XMLUtils.createElementInSignatureSpace(this._doc,
                                                    Constants._TAG_DIGESTVALUE);
 
@@ -176,14 +183,21 @@ public class Reference extends SignatureElementProxy {
     * @param element <code>Reference</code> element
     * @param BaseURI the URI of the resource where the XML instance was stored
     * @param manifest is the {@link Manifest} of {@link SignedInfo} in which the Reference occurs. We need this because the Manifest has the individual {@link ResourceResolver}s whcih have been set by the user
-    * @param cx The CachedXPathAPIHolder to use in this reference.
     * @throws XMLSecurityException
     */
    protected Reference(Element element, String BaseURI, Manifest manifest)
            throws XMLSecurityException {
 
-      super(element, BaseURI);      
-
+      super(element, BaseURI);
+      this._baseURI=BaseURI;
+      Element el=XMLUtils.getNextElement(element.getFirstChild());
+      if (Constants._TAG_TRANSFORMS.equals(el.getLocalName()) && 
+    		  Constants.SignatureSpecNS.equals(el.getNamespaceURI())) {
+    	  transforms = new Transforms(el,this._baseURI);
+    	  el=XMLUtils.getNextElement(el.getNextSibling());
+      }
+      digestMethodElem = el;
+      digestValueElement =XMLUtils.getNextElement(digestMethodElem.getNextSibling());;
       this._manifest = manifest;
    }
 
@@ -197,10 +211,7 @@ public class Reference extends SignatureElementProxy {
     */
    public MessageDigestAlgorithm getMessageDigestAlgorithm()
            throws XMLSignatureException {
-
-      Element digestMethodElem = XMLUtils.selectDsNode(this._constructionElement.getFirstChild(),
-            Constants._TAG_DIGESTMETHOD,0);
-
+      
       if (digestMethodElem == null) {
          return null;
       }
@@ -292,8 +303,7 @@ public class Reference extends SignatureElementProxy {
     */
    public boolean typeIsReferenceToObject() {
 
-      if ((this.getType() != null)
-              && this.getType().equals(Reference.OBJECT_URI)) {
+      if (Reference.OBJECT_URI.equals(this.getType())) {
          return true;
       }
 
@@ -310,8 +320,7 @@ public class Reference extends SignatureElementProxy {
     */
    public boolean typeIsReferenceToManifest() {
 
-      if ((this.getType() != null)
-              && this.getType().equals(Reference.MANIFEST_URI)) {
+      if (Reference.MANIFEST_URI.equals(this.getType())) {
          return true;
       }
 
@@ -327,8 +336,7 @@ public class Reference extends SignatureElementProxy {
    {
 
       if (this._state == MODE_SIGN) {
-         Element digestValueElement =XMLUtils.selectDsNode(this._constructionElement.getFirstChild(),
-                 Constants._TAG_DIGESTVALUE,0);
+
          Node n=digestValueElement.getFirstChild();
          while (n!=null) {
                digestValueElement.removeChild(n);
@@ -406,7 +414,7 @@ public class Reference extends SignatureElementProxy {
     * @return a XMLSignature with a byte array.
     * @throws ReferenceNotInitializedException
     *
-    * @deprecated use
+    * @deprecated use getContentsBeforeTransformation
     */
    public XMLSignatureInput getTransformsInput() throws ReferenceNotInitializedException   
 	{  
@@ -582,7 +590,7 @@ public class Reference extends SignatureElementProxy {
 
    /**
     * This method only works works after a call to verify.
-    * @return 
+    * @return the transformed output(i.e. what is going to be digested).
     */
    public XMLSignatureInput getTransformsOutput() {
       return this._transformsOutput;
@@ -591,8 +599,8 @@ public class Reference extends SignatureElementProxy {
    /**
     * This method returns the {@link XMLSignatureInput} which is referenced by the
     * <CODE>URI</CODE> Attribute.
-    * @param os TODO
-    * @return
+    * @param os where to write the transformation can be null.
+    * @return the element to digest
     *
     * @throws XMLSignatureException
     * @see Manifest#verifyReferences()
@@ -634,16 +642,7 @@ public class Reference extends SignatureElementProxy {
            throws XMLSignatureException, InvalidTransformException,
                   TransformationException, XMLSecurityException {
 
-      Element transformsElement = XMLUtils.selectDsNode(this._constructionElement.getFirstChild(),
-            Constants._TAG_TRANSFORMS,0);
-
-      if (transformsElement != null) {
-         Transforms transforms = new Transforms(transformsElement,
-                                                this._baseURI);
-
-         return transforms;
-      } 
-       return null;      
+      return transforms;           
    }
 
    /**
@@ -686,7 +685,7 @@ public class Reference extends SignatureElementProxy {
 
          mda.reset();
          DigesterOutputStream diOs=new DigesterOutputStream(mda);
-         OutputStream os=new BufferedOutputStream(diOs);
+         OutputStream os=new UnsyncBufferedOutputStream(diOs);
          XMLSignatureInput output=this.dereferenceURIandPerformTransforms(os);         
          output.updateOutputStream(os);
          os.flush();
@@ -709,9 +708,7 @@ public class Reference extends SignatureElementProxy {
 	* @throws XMLSecurityException if the Reference does not contain a DigestValue element
     */
    public byte[] getDigestValue() throws Base64DecodingException, XMLSecurityException {
-      Element digestValueElem = XMLUtils.selectDsNode(this._constructionElement.getFirstChild()
-            ,Constants._TAG_DIGESTVALUE,0);
-	  if (digestValueElem == null) {
+      if (digestValueElement == null) {
 		  // The required element is not in the XML!
 		  Object[] exArgs ={ Constants._TAG_DIGESTVALUE, 
 							 Constants.SignatureSpecNS };
@@ -719,7 +716,7 @@ public class Reference extends SignatureElementProxy {
 					"signature.Verification.NoSignatureElement", 
 					exArgs);
 	  }
-      byte[] elemDig = Base64.decode(digestValueElem);
+      byte[] elemDig = Base64.decode(digestValueElement);
       return elemDig;
    }
 

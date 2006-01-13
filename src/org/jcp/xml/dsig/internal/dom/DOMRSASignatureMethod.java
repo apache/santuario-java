@@ -26,6 +26,7 @@ import javax.xml.crypto.*;
 import javax.xml.crypto.dsig.*;
 import javax.xml.crypto.dsig.spec.SignatureMethodParameterSpec;
 
+import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.PrivateKey;
@@ -39,7 +40,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.w3c.dom.Element;
 
-import org.apache.xml.security.utils.Base64;
+import org.jcp.xml.dsig.internal.SignerOutputStream;
 
 /**
  * DOM-based implementation of SignatureMethod for RSA algorithm.
@@ -49,7 +50,7 @@ import org.apache.xml.security.utils.Base64;
  */
 public final class DOMRSASignatureMethod extends DOMSignatureMethod { 
 
-    static Logger log = Logger.getLogger(DOMRSASignatureMethod.class.getName());
+    private static Logger log = Logger.getLogger("org.jcp.xml.dsig.internal.dom");
     private Signature signature;
 
     /**
@@ -100,10 +101,12 @@ public final class DOMRSASignatureMethod extends DOMSignatureMethod {
 	return (getParameterSpec() == spec);
     }
 
-    public boolean verify(Key key, byte[] data, byte[] sig) 
-	throws InvalidKeyException, SignatureException {
-    	if (key == null || sig == null) {
-    	    throw new NullPointerException("key or signature cannot be null");
+    public boolean verify(Key key, DOMSignedInfo si, byte[] sig,
+	XMLValidateContext context) 
+	throws InvalidKeyException, SignatureException, XMLSignatureException {
+    	if (key == null || si == null || sig == null) {
+    	    throw new NullPointerException
+		("key, signed info or signature cannot be null");
     	}
 
         if (!(key instanceof PublicKey)) {
@@ -118,22 +121,24 @@ public final class DOMRSASignatureMethod extends DOMSignatureMethod {
 	    }
 	}
         signature.initVerify((PublicKey) key);
-        signature.update(data);
-        log.log(Level.FINE, "verifying data: " + Base64.encode(data));
-        log.log(Level.FINE, "verifying with key: " + key);
-        return signature.verify(sig );  
+	if (log.isLoggable(Level.FINE)) {
+	    log.log(Level.FINE, "Signature provider:"+ signature.getProvider());
+            log.log(Level.FINE, "verifying with key: " + key);
+	}
+	si.canonicalize(context, new SignerOutputStream(signature));
+
+	return signature.verify(sig);
     }
 
-    public byte[] sign(Key key, byte[] data) throws InvalidKeyException {
-    	if (key == null || data == null) {
+    public byte[] sign(Key key, DOMSignedInfo si, XMLSignContext context) 
+	throws InvalidKeyException, XMLSignatureException {
+    	if (key == null || si == null) {
     	    throw new NullPointerException();
     	}
 
         if (!(key instanceof PrivateKey)) {
             throw new InvalidKeyException("key must be PrivateKey");
         }
-        log.log(Level.FINE, "Signing data: " + Base64.encode(data));
-        log.log(Level.FINE, "Signing with key: " + key);
 	if (signature == null) {
 	    try {
                 // FIXME: do other hashes besides sha-1
@@ -143,8 +148,14 @@ public final class DOMRSASignatureMethod extends DOMSignatureMethod {
 	    }
 	}
         signature.initSign((PrivateKey) key);
+	if (log.isLoggable(Level.FINE)) {
+            log.log(Level.FINE, "Signature provider:" +signature.getProvider());
+            log.log(Level.FINE, "Signing with key: " + key);
+        }
+
+	si.canonicalize(context, new SignerOutputStream(signature));
+
         try {
-            signature.update(data);
 	    return signature.sign();
         } catch (SignatureException se) {
 	    // should never occur!

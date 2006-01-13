@@ -63,7 +63,7 @@ public final class DOMSignatureProperties extends DOMStructure
 	    throw new IllegalArgumentException("properties cannot be empty");
         } else {
             List propsCopy = new ArrayList(properties);
-            for (int i = 0; i < propsCopy.size(); i++) {
+            for (int i = 0, size = propsCopy.size(); i < size; i++) {
                 if (!(propsCopy.get(i) instanceof SignatureProperty)) {
                     throw new ClassCastException
                         ("properties["+i+"] is not a valid type");
@@ -85,8 +85,9 @@ public final class DOMSignatureProperties extends DOMStructure
         id = DOMUtils.getAttributeValue(propsElem, "Id");
 
 	NodeList nodes = propsElem.getChildNodes();
-	List properties = new ArrayList(nodes.getLength());
-	for (int i = 0; i < nodes.getLength(); i++) {
+	int length = nodes.getLength();
+	List properties = new ArrayList(length);
+	for (int i = 0; i < length; i++) {
 	    Node child = nodes.item(i);
 	    if (child.getNodeType() == Node.ELEMENT_NODE) {
 	        properties.add(new DOMSignatureProperty((Element) child));
@@ -118,9 +119,9 @@ public final class DOMSignatureProperties extends DOMStructure
         DOMUtils.setAttributeID(propsElem, "Id", id);
 
         // create and append any properties
-	Iterator i = properties.iterator();
-	while (i.hasNext()) {
-	    DOMSignatureProperty property = (DOMSignatureProperty) i.next();
+	for (int i = 0, size = properties.size(); i < size; i++) {
+	    DOMSignatureProperty property = 
+		(DOMSignatureProperty) properties.get(i);
 	    property.marshal(propsElem, dsPrefix, context);
         }
 	    

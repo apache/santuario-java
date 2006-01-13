@@ -67,7 +67,7 @@ public final class DOMSignatureProperty extends DOMStructure
 	    throw new IllegalArgumentException("content cannot be empty");
         } else {
             List contentCopy = new ArrayList(content);
-            for (int i = 0; i < contentCopy.size(); i++) {
+            for (int i = 0, size = contentCopy.size(); i < size; i++) {
                 if (!(contentCopy.get(i) instanceof XMLStructure)) {
                     throw new ClassCastException
                         ("content["+i+"] is not a valid type");
@@ -93,8 +93,9 @@ public final class DOMSignatureProperty extends DOMStructure
         id = DOMUtils.getAttributeValue(propElem, "Id");
 
 	NodeList nodes = propElem.getChildNodes();
-	List content = new ArrayList(nodes.getLength());
-	for (int i = 0; i < nodes.getLength(); i++) {
+	int length = nodes.getLength();
+	List content = new ArrayList(length);
+	for (int i = 0; i < length; i++) {
 	    content.add(new javax.xml.crypto.dom.DOMStructure(nodes.item(i)));
 	}
         if (content.isEmpty()) {
@@ -128,10 +129,9 @@ public final class DOMSignatureProperty extends DOMStructure
         DOMUtils.setAttribute(propElem, "Target", target);
 
         // create and append any elements and mixed content
-	Iterator i = content.iterator();
-	while (i.hasNext()) {
+	for (int i = 0, size = content.size(); i < size; i++) {
 	    javax.xml.crypto.dom.DOMStructure property = 
-		(javax.xml.crypto.dom.DOMStructure) i.next();
+		(javax.xml.crypto.dom.DOMStructure) content.get(i);
 	    DOMUtils.appendChild(propElem, property.getNode());
         }
 	    
@@ -156,10 +156,11 @@ public final class DOMSignatureProperty extends DOMStructure
     }
 
     private boolean equalsContent(List otherContent) {
-	if (content.size() != otherContent.size()) {
+	int osize = otherContent.size();
+	if (content.size() != osize) {
             return false;
 	}
-        for (int i = 0; i < otherContent.size(); i++) {
+        for (int i = 0; i < osize; i++) {
             XMLStructure oxs = (XMLStructure) otherContent.get(i);
             XMLStructure xs = (XMLStructure) content.get(i);
             if (oxs instanceof javax.xml.crypto.dom.DOMStructure) {

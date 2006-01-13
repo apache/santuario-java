@@ -45,8 +45,7 @@ import org.w3c.dom.Element;
  */
 public final class DOMSHA1DigestMethod extends DOMDigestMethod {
 
-    static Logger log = Logger.getLogger(DOMSHA1DigestMethod.class.getName());
-
+    private static Logger log = Logger.getLogger("org.jcp.xml.dsig.internal.dom");
     private MessageDigest md;
 
     /**
@@ -97,18 +96,20 @@ public final class DOMSHA1DigestMethod extends DOMDigestMethod {
 	    throw new DigestException("SHA1 MessageDigest not available");
         }
         DigestInputStream dis = new DigestInputStream(is, md);
-        log.log(Level.FINE, "Predigested reference:\n");
-        byte[] buf = new byte[1024];
-	int bytesRead = 0;
-        while (true) {
-	    int read = dis.read(buf);
-	    if (read == -1) { // EOF
-	        break;
+	if (log.isLoggable(Level.FINE)) {
+            log.log(Level.FINE, "Predigested reference:\n");
+            byte[] buf = new byte[1024];
+	    int bytesRead = 0;
+            while (true) {
+	        int read = dis.read(buf);
+	        if (read == -1) { // EOF
+	            break;
+	        }
+	        bytesRead = bytesRead + read;
+	        log.log(Level.FINE, new String(buf));
 	    }
-	    bytesRead = bytesRead + read;
-	    log.log(Level.FINE, new String(buf));
+	    log.log(Level.FINE, "bytesRead=" + bytesRead);
 	}
-	log.log(Level.FINE, "bytesRead="+bytesRead);
 	return md.digest();
     }
 }

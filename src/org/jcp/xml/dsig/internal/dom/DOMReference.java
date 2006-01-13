@@ -46,9 +46,11 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
+import org.jcp.xml.dsig.internal.DigesterOutputStream;
 import org.apache.xml.security.exceptions.Base64DecodingException;
 import org.apache.xml.security.signature.XMLSignatureInput;
 import org.apache.xml.security.utils.Base64;
+import org.apache.xml.security.utils.UnsyncBufferedOutputStream;
 
 /**
  * DOM-based implementation of Reference.
@@ -59,7 +61,7 @@ import org.apache.xml.security.utils.Base64;
 public final class DOMReference extends DOMStructure 
     implements Reference, DOMURIReference {
 
-    static Logger log = Logger.getLogger(DOMReference.class.getName());
+    private static Logger log = Logger.getLogger("org.jcp.xml.dsig.internal.dom");
 
     private final DigestMethod digestMethod;
     private final String id;
@@ -78,6 +80,7 @@ public final class DOMReference extends DOMStructure
     private boolean validationStatus;
     private Data derefData;
     private InputStream dis;
+    private MessageDigest md;
 
     /**
      * Creates a <code>Reference</code> from the specified parameters.
@@ -114,7 +117,7 @@ public final class DOMReference extends DOMStructure
             this.appliedTransforms = Collections.EMPTY_LIST;
         } else {
             List transformsCopy = new ArrayList(appliedTransforms);
-            for (int i = 0; i < transformsCopy.size(); i++) {
+            for (int i = 0, size = transformsCopy.size(); i < size; i++) {
                 if (!(transformsCopy.get(i) instanceof Transform)) {
                     throw new ClassCastException
                         ("appliedTransforms["+i+"] is not a valid type");
@@ -127,7 +130,7 @@ public final class DOMReference extends DOMStructure
             this.transforms = Collections.EMPTY_LIST;
         } else {
             List transformsCopy = new ArrayList(transforms);
-            for (int i = 0; i < transformsCopy.size(); i++) {
+            for (int i = 0, size = transformsCopy.size(); i < size; i++) {
                 if (!(transformsCopy.get(i) instanceof Transform)) {
                     throw new ClassCastException
                         ("transforms["+i+"] is not a valid type");
@@ -165,7 +168,7 @@ public final class DOMReference extends DOMStructure
 	throws MarshalException {
         // unmarshal Transforms, if specified
         Element nextSibling = DOMUtils.getFirstChildElement(refElem);
-        List transforms = new ArrayList();
+        List transforms = new ArrayList(5);
         if (nextSibling.getLocalName().equals("Transforms")) {
 	    Element transformElem = DOMUtils.getFirstChildElement(nextSibling);
 	    while (transformElem != null) {
@@ -236,7 +239,9 @@ public final class DOMReference extends DOMStructure
 
     public void marshal(Node parent, String dsPrefix, DOMCryptoContext context)
 	throws MarshalException {
-        log.log(Level.FINE, "Marshalling Reference");
+	if (log.isLoggable(Level.FINE)) {
+            log.log(Level.FINE, "Marshalling Reference");
+	}
         Document ownerDoc = DOMUtils.getOwnerDocument(parent);
 
         refElem = DOMUtils.createElement
@@ -252,14 +257,13 @@ public final class DOMReference extends DOMStructure
             Element transformsElem = DOMUtils.createElement
 		(ownerDoc, "Transforms", XMLSignature.XMLNS, dsPrefix);
 	    refElem.appendChild(transformsElem);
-	    Iterator i = appliedTransforms.iterator();
-	    while (i.hasNext()) {
-	        DOMStructure transform = (DOMStructure) i.next();
+	    for (int i = 0, size = appliedTransforms.size(); i < size; i++) {
+	        DOMStructure transform = 
+		    (DOMStructure) appliedTransforms.get(i);
 	        transform.marshal(transformsElem, dsPrefix, context);
 	    }
-	    i = transforms.iterator();
-	    while (i.hasNext()) {
-	        DOMStructure transform = (DOMStructure) i.next();
+	    for (int i = 0, size = transforms.size(); i < size; i++) {
+	        DOMStructure transform = (DOMStructure) transforms.get(i);
 	        transform.marshal(transformsElem, dsPrefix, context);
 	    }
 	}
@@ -268,7 +272,9 @@ public final class DOMReference extends DOMStructure
 	((DOMDigestMethod) digestMethod).marshal(refElem, dsPrefix, context);
 
 	// create and append DigestValue element
-	log.log(Level.FINE, "Adding digestValueElem");
+	if (log.isLoggable(Level.FINE)) {
+	    log.log(Level.FINE, "Adding digestValueElem");
+	}
         Element digestValueElem = DOMUtils.createElement
             (ownerDoc, "DigestValue", XMLSignature.XMLNS, dsPrefix);
 	if (digestValue != null) {
@@ -289,12 +295,13 @@ public final class DOMReference extends DOMStructure
 	} else {
 	    data = appliedTransformData;
 	}
-	byte[] digestInput = transform(data, signContext);
-        digestValue = digestInput;
+	digestValue = transform(data, signContext);
 
 	// insert digestValue into DigestValue element
 	String encodedDV = Base64.encode(digestValue);
-	log.log(Level.FINE, "Reference object uri = " + uri);
+	if (log.isLoggable(Level.FINE)) {
+	    log.log(Level.FINE, "Reference object uri = " + uri);
+	}
         Element digestElem = DOMUtils.getLastChildElement(refElem);
 	if (digestElem == null) {
 	    throw new XMLSignatureException("DigestValue element expected");
@@ -303,14 +310,10 @@ public final class DOMReference extends DOMStructure
 	digestElem.appendChild
 	    (refElem.getOwnerDocument().createTextNode(encodedDV));
 
-        Boolean cache = (Boolean)
-	    signContext.getProperty("javax.xml.dsig.cacheReference");
-        if (cache != null && cache.booleanValue() == true) {
-	    this.dis = new ByteArrayInputStream(digestInput);
-	    this.derefData = data;
-	}
 	digested = true;
-	log.log(Level.FINE, "Reference digesting completed");
+	if (log.isLoggable(Level.FINE)) {
+	    log.log(Level.FINE, "Reference digesting completed");
+	}
     }
 
     public boolean validate(XMLValidateContext validateContext)
@@ -322,19 +325,16 @@ public final class DOMReference extends DOMStructure
 	    return validationStatus;
 	}
 	Data data = dereference(validateContext);
-	byte[] digestInput = transform(data, validateContext);
+	calcDigestValue = transform(data, validateContext);
 
-	calcDigestValue = digestInput;
-	log.log(Level.FINE, "Expected digest: " + Base64.encode(digestValue));
-	log.log(Level.FINE, "Actual digest: " + Base64.encode(calcDigestValue));
+	if (log.isLoggable(Level.FINE)) {
+	    log.log(Level.FINE, "Expected digest: " 
+		+ Base64.encode(digestValue));
+	    log.log(Level.FINE, "Actual digest: " 
+		+ Base64.encode(calcDigestValue));
+	}
 
 	validationStatus = Arrays.equals(digestValue, calcDigestValue);
-        Boolean cache = (Boolean)
-	    validateContext.getProperty("javax.xml.dsig.cacheReference");
-        if (cache != null && cache.booleanValue() == true) {
-	    this.dis = new ByteArrayInputStream(digestInput);
-	    this.derefData = data;
-	}
 	validated = true;
 	return validationStatus;
     }
@@ -358,6 +358,12 @@ public final class DOMReference extends DOMStructure
 	}
 	try {
             data = deref.dereference(this, context);
+	    if (log.isLoggable(Level.FINE)) {
+                log.log(Level.FINE, "URIDereferencer class name: "
+                    + deref.getClass().getName());
+                log.log(Level.FINE, "Data class name: "
+                    + data.getClass().getName());
+            }
         } catch (URIReferenceException ure) {
 	    throw new XMLSignatureException(ure);
         }
@@ -368,24 +374,32 @@ public final class DOMReference extends DOMStructure
     private byte[] transform(Data dereferencedData, 
 	XMLCryptoContext context) throws XMLSignatureException {
 
-	Data data = dereferencedData;
-
-	OutputStream os = new BufferedOutputStream(new ByteArrayOutputStream());
-	MessageDigest md;
-	try {
-	    md = MessageDigest.getInstance("SHA-1");
-	} catch (NoSuchAlgorithmException nsae) {
-	    throw new XMLSignatureException(nsae);
-	}
-	DigestOutputStream dos = new DigestOutputStream(os, md);
-	Iterator i = transforms.iterator();
-	while (i.hasNext()) {
-	    DOMTransform transform = (DOMTransform) i.next();
+	if (md == null) {
 	    try {
-                if (i.hasNext()) {
+	        md = MessageDigest.getInstance("SHA-1");
+	    } catch (NoSuchAlgorithmException nsae) {
+	        throw new XMLSignatureException(nsae);
+	    }
+	}
+	md.reset();
+	DigesterOutputStream dos;
+	Boolean cache = (Boolean)
+            context.getProperty("javax.xml.crypto.dsig.cacheReference");
+        if (cache != null && cache.booleanValue() == true) {
+            this.derefData = copyDerefData(dereferencedData);
+            dos = new DigesterOutputStream(md, true);
+        } else {
+            dos = new DigesterOutputStream(md);
+        }
+	OutputStream os = new UnsyncBufferedOutputStream(dos);
+        Data data = dereferencedData;
+        for (int i = 0, size = transforms.size(); i < size; i++) {
+	    DOMTransform transform = (DOMTransform) transforms.get(i);
+	    try {
+                if (i < size - 1) {
                     data = transform.transform(data, context);
                 } else {
-                    data = transform.transform(data, context, dos);
+                    data = transform.transform(data, context, os);
                 }
 	    } catch (TransformException te) {
 		throw new XMLSignatureException(te);
@@ -409,10 +423,13 @@ public final class DOMReference extends DOMStructure
 	        } else {
 	            throw new XMLSignatureException("unrecognized Data type");
 	        }
-	        xi.updateOutputStream(dos);
+	        xi.updateOutputStream(os);
 	    }
-	    dos.close();
-	    return md.digest();
+	    os.flush();
+	    if (cache != null && cache.booleanValue() == true) {
+                this.dis = dos.getInputStream();
+            }
+            return dos.getDigestValue();
 	} catch (Exception e) {
 	    throw new XMLSignatureException(e);
 	}
@@ -447,5 +464,40 @@ public final class DOMReference extends DOMStructure
 
     boolean isDigested() {
 	return digested;
+    }
+
+    private static Data copyDerefData(Data dereferencedData) {
+        if (dereferencedData instanceof ApacheData) {
+            // need to make a copy of the Data
+            ApacheData ad = (ApacheData) dereferencedData;
+            XMLSignatureInput xsi = ad.getXMLSignatureInput();
+            if (xsi.isNodeSet()) {
+                try {
+                    final Set s = xsi.getNodeSet();
+                    return new NodeSetData() {
+                        public Iterator iterator() { return s.iterator(); }
+                    };
+                } catch (Exception e) {
+                    // log a warning
+                            log.log(Level.WARNING,
+                        "cannot cache dereferenced data: " + e);
+                    return null;
+                }
+            } else if (xsi.isElement()) {
+                return new DOMSubTreeData
+                    (xsi.getSubNode(), xsi.isExcludeComments());
+            } else if (xsi.isOctetStream() || xsi.isByteArray()) {
+                try {
+                return new OctetStreamData
+                  (xsi.getOctetStream(), xsi.getSourceURI(), xsi.getMIMEType());
+                } catch (IOException ioe) {
+                    // log a warning
+                            log.log(Level.WARNING,
+                        "cannot cache dereferenced data: " + ioe);
+                    return null;
+                }
+            }
+        }
+        return dereferencedData;
     }
 }

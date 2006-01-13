@@ -65,8 +65,9 @@ public final class DOMXPathTransform extends ApacheTransform {
         // create a Map of namespace prefixes
         NamedNodeMap attributes = paramsElem.getAttributes();
         if (attributes != null) {
-            Map namespaceMap = new HashMap(attributes.getLength());
-	    for (int i = 0; i < attributes.getLength(); i++) {
+	    int length = attributes.getLength();
+            Map namespaceMap = new HashMap(length);
+	    for (int i = 0; i < length; i++) {
 	        Attr attr = (Attr) attributes.item(i);
 	        String prefix = attr.getPrefix();
 	        if (prefix != null && prefix.equals("xmlns")) {

@@ -63,82 +63,75 @@ public final class XMLDSigRI extends Provider {
 
 
 	// Inclusive C14N
-	map.put("TransformService." + CanonicalizationMethod.INCLUSIVE,
+	map.put((String)"TransformService." + CanonicalizationMethod.INCLUSIVE,
 		"org.jcp.xml.dsig.internal.dom.DOMCanonicalXMLC14NMethod");
 	map.put("Alg.Alias.TransformService.INCLUSIVE", 
 		CanonicalizationMethod.INCLUSIVE);
-	map.put("TransformService." + CanonicalizationMethod.INCLUSIVE +
+	map.put((String)"TransformService." + CanonicalizationMethod.INCLUSIVE +
 		" MechanismType", "DOM");
 
 	// InclusiveWithComments C14N
-	map.put("TransformService." + 
+	map.put((String) "TransformService." + 
 		CanonicalizationMethod.INCLUSIVE_WITH_COMMENTS,
 		"org.jcp.xml.dsig.internal.dom.DOMCanonicalXMLC14NMethod");
 	map.put("Alg.Alias.TransformService.INCLUSIVE_WITH_COMMENTS", 
 		CanonicalizationMethod.INCLUSIVE_WITH_COMMENTS);
-	map.put("TransformService." + 
+	map.put((String) "TransformService." + 
 		CanonicalizationMethod.INCLUSIVE_WITH_COMMENTS + 
 		" MechanismType", "DOM");
 
 	// Exclusive C14N
-	map.put("TransformService." + CanonicalizationMethod.EXCLUSIVE,
+	map.put((String) "TransformService." + CanonicalizationMethod.EXCLUSIVE,
 		"org.jcp.xml.dsig.internal.dom.DOMExcC14NMethod");
 	map.put("Alg.Alias.TransformService.EXCLUSIVE", 
 		CanonicalizationMethod.EXCLUSIVE);
-	map.put("TransformService." + CanonicalizationMethod.EXCLUSIVE +
+	map.put((String)"TransformService." + CanonicalizationMethod.EXCLUSIVE +
 		" MechanismType", "DOM");
 
 	// ExclusiveWithComments C14N
-	map.put("TransformService." + 
+	map.put((String) "TransformService." + 
 		CanonicalizationMethod.EXCLUSIVE_WITH_COMMENTS,
 		"org.jcp.xml.dsig.internal.dom.DOMExcC14NMethod");
 	map.put("Alg.Alias.TransformService.EXCLUSIVE_WITH_COMMENTS", 
 		CanonicalizationMethod.EXCLUSIVE_WITH_COMMENTS);
-	map.put("TransformService." + 
+	map.put((String) "TransformService." + 
 		CanonicalizationMethod.EXCLUSIVE_WITH_COMMENTS +
 		" MechanismType", "DOM");
 
 	// Base64 Transform
-	map.put("TransformService." + Transform.BASE64,
+	map.put((String) "TransformService." + Transform.BASE64,
 		"org.jcp.xml.dsig.internal.dom.DOMBase64Transform");
 	map.put("Alg.Alias.TransformService.BASE64", Transform.BASE64);
-	map.put("TransformService." + Transform.BASE64 + " MechanismType",
-		"DOM");
+	map.put((String) "TransformService." + Transform.BASE64 + 
+		" MechanismType", "DOM");
 
 	// Enveloped Transform
-	map.put("TransformService." + Transform.ENVELOPED,
+	map.put((String) "TransformService." + Transform.ENVELOPED,
 		"org.jcp.xml.dsig.internal.dom.DOMEnvelopedTransform");
 	map.put("Alg.Alias.TransformService.ENVELOPED", Transform.ENVELOPED);
-	map.put("TransformService." + Transform.ENVELOPED + 
+	map.put((String) "TransformService." + Transform.ENVELOPED + 
 		" MechanismType", "DOM");
 
 	// XPath2 Transform
-	map.put("TransformService." + Transform.XPATH2,
+	map.put((String) "TransformService." + Transform.XPATH2,
 		"org.jcp.xml.dsig.internal.dom.DOMXPathFilter2Transform");
 	map.put("Alg.Alias.TransformService.XPATH2", Transform.XPATH2);
-	map.put("TransformService." + Transform.XPATH2 + " MechanismType",
-		"DOM");
+	map.put((String) "TransformService." + Transform.XPATH2 + 
+		" MechanismType", "DOM");
 
 	// XPath Transform
-	map.put("TransformService." + Transform.XPATH,
+	map.put((String) "TransformService." + Transform.XPATH,
 		"org.jcp.xml.dsig.internal.dom.DOMXPathTransform");
 	map.put("Alg.Alias.TransformService.XPATH", Transform.XPATH);
-	map.put("TransformService." + Transform.XPATH + " MechanismType",
-		"DOM");
+	map.put((String) "TransformService." + Transform.XPATH + 
+		" MechanismType", "DOM");
 
 	// XSLT Transform
-	map.put("TransformService." + Transform.XSLT,
+	map.put((String) "TransformService." + Transform.XSLT,
 		"org.jcp.xml.dsig.internal.dom.DOMXSLTTransform");
 	map.put("Alg.Alias.TransformService.XSLT", Transform.XSLT);
-	map.put("TransformService." + Transform.XSLT + " MechanismType",
-		"DOM");
-
-	// SHA1 DigestMethod
-	map.put("TransformService." + DigestMethod.SHA1,
-		"org.jcp.xml.dsig.internal.dom.DOMSHA1DigestMethod");
-	map.put("Alg.Alias.TransformService.SHA1", DigestMethod.SHA1);
-	map.put("TransformService." + DigestMethod.SHA1 + " MechanismType",
-		"DOM");
+	map.put((String) "TransformService." + Transform.XSLT + 
+		" MechanismType", "DOM");
 
 	AccessController.doPrivileged(new java.security.PrivilegedAction() {
 	    public Object run() {

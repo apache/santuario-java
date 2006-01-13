@@ -21,7 +21,8 @@ package org.apache.xml.security.keys.keyresolver;
 
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
-import java.util.Vector;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.crypto.SecretKey;
 
@@ -47,7 +48,7 @@ public class KeyResolver {
    static boolean _alreadyInitialized = false;
 
    /** Field _resolverVector */
-   static Vector _resolverVector = null;
+   static List _resolverVector = null;
 
    /** Field _resolverSpi */
    protected KeyResolverSpi _resolverSpi = null;
@@ -73,7 +74,7 @@ public class KeyResolver {
    /**
     * Method length
     *
-    * @return
+    * @return the length of resolvers registed
     */
    public static int length() {
       return KeyResolver._resolverVector.size();
@@ -83,18 +84,14 @@ public class KeyResolver {
     * Method item
     *
     * @param i
-    * @return
+    * @return the number i resolver registerd
     * @throws KeyResolverException
     */
    public static KeyResolver item(int i) throws KeyResolverException {
 
-      String currentClass = (String) KeyResolver._resolverVector.elementAt(i);
-      KeyResolver resolver = null;
-
-      try {
-         resolver = new KeyResolver(currentClass);
-      } catch (Exception e) {
-         throw new KeyResolverException("utils.resolver.noClass", e);
+	   KeyResolver resolver = (KeyResolver) KeyResolver._resolverVector.get(i);
+      if (resolver==null) {
+         throw new KeyResolverException("utils.resolver.noClass");
       }
 
       return resolver;
@@ -106,7 +103,7 @@ public class KeyResolver {
     * @param element
     * @param BaseURI
     * @param storage
-    * @return
+    * @return the instance that happends to implement the thing.
     * 
     * @throws KeyResolverException
     */
@@ -115,26 +112,22 @@ public class KeyResolver {
               throws KeyResolverException {
 
       for (int i = 0; i < KeyResolver._resolverVector.size(); i++) {
-         String currentClass =
-            (String) KeyResolver._resolverVector.elementAt(i);
-         KeyResolver resolver = null;
+		  KeyResolver resolver=
+            (KeyResolver) KeyResolver._resolverVector.get(i);
 
-         try {
-            resolver = new KeyResolver(currentClass);
-         } catch (Exception e) {
+		  if (resolver==null) {
             Object exArgs[] = {
                (((element != null)
                  && (element.getNodeType() == Node.ELEMENT_NODE))
                 ? element.getTagName()
                 : "null") };
 
-            throw new KeyResolverException("utils.resolver.noClass", exArgs, e);
+            throw new KeyResolverException("utils.resolver.noClass", exArgs);
          }
          if (log.isDebugEnabled())
-         	log.debug("check resolvability by class " + currentClass);
+         	log.debug("check resolvability by class " + resolver.getClass());
 
-         if ((resolver != null)
-                 && resolver.canResolve(element, BaseURI, storage)) {
+         if (resolver.canResolve(element, BaseURI, storage)) {
             return resolver;
          }
       }
@@ -153,7 +146,7 @@ public class KeyResolver {
    public static void init() {
 
       if (!KeyResolver._alreadyInitialized) {
-         KeyResolver._resolverVector = new Vector(10);
+         KeyResolver._resolverVector = new ArrayList(10);
          _alreadyInitialized = true;
       }
    }
@@ -166,9 +159,12 @@ public class KeyResolver {
     * {@link org.apache.xml.security.keys.KeyInfo#registerInternalKeyResolver}.
     *
     * @param className
+ * @throws InstantiationException 
+ * @throws IllegalAccessException 
+ * @throws ClassNotFoundException 
     */
-   public static void register(String className) {
-      KeyResolver._resolverVector.add(className);
+   public static void register(String className) throws ClassNotFoundException, IllegalAccessException, InstantiationException {
+      KeyResolver._resolverVector.add(new KeyResolver(className));
    }
 
    /**
@@ -197,7 +193,7 @@ public class KeyResolver {
     * @param element
     * @param BaseURI
     * @param storage
-    * @return
+    * @return resolve from the static register an element
     * 
     * @throws KeyResolverException
     */
@@ -216,8 +212,8 @@ public class KeyResolver {
     *
     * @param element
     * @param BaseURI
-    * @param storage
-    * @return
+    * @param storage 
+    * @return resolved public key from the registered from the elements
     * 
     * @throws KeyResolverException
     */
@@ -233,7 +229,7 @@ public class KeyResolver {
     * @param element
     * @param BaseURI
     * @param storage
-    * @return
+    * @return resolved X509certificate key from the registered from the elements
     * 
     * @throws KeyResolverException
     */
@@ -248,7 +244,7 @@ public class KeyResolver {
     * @param element
     * @param BaseURI
     * @param storage
-    * @return
+    * @return resolved SecretKey key from the registered from the elements
     * @throws KeyResolverException
     */
    public SecretKey resolveSecretKey(
@@ -272,7 +268,7 @@ public class KeyResolver {
     * Method getProperty
     *
     * @param key
-    * @return
+    * @return the property setted for this resolver
     */
    public String getProperty(String key) {
       return this._resolverSpi.engineGetProperty(key);
@@ -281,7 +277,7 @@ public class KeyResolver {
    /**
     * Method getPropertyKeys
     *
-    * @return
+    * @return the properties key registerd in this resolver
     */
    public String[] getPropertyKeys() {
       return this._resolverSpi.engineGetPropertyKeys();
@@ -291,7 +287,7 @@ public class KeyResolver {
     * Method understandsProperty
     *
     * @param propertyToTest
-    * @return
+    * @return true if the resolver understands property propertyToTest
     */
    public boolean understandsProperty(String propertyToTest) {
       return this._resolverSpi.understandsProperty(propertyToTest);
@@ -303,7 +299,7 @@ public class KeyResolver {
     * @param element
     * @param BaseURI
     * @param storage
-    * @return
+    * @return true if can resolve the key in the element
     */
    public boolean canResolve(Element element, String BaseURI,
                              StorageResolver storage) {
@@ -313,7 +309,7 @@ public class KeyResolver {
    /**
     * Method resolverClassName
     *
-    * @return
+    * @return the name of the resolver.
     */
    public String resolverClassName() {
       return this._resolverSpi.getClass().getName();

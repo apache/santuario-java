@@ -38,16 +38,6 @@ public class TransformXPointer extends TransformSpi {
    public static final String implementedTransformURI =
       Transforms.TRANSFORM_XPOINTER;
 
-   //J-
-   /** @inheritDoc */
-   public boolean wantsOctetStream ()   { return false; }
-   /** @inheritDoc */
-   public boolean wantsNodeSet ()       { return true; }
-   /** @inheritDoc */
-   public boolean returnsOctetStream () { return false; }
-   /** @inheritDoc */
-   public boolean returnsNodeSet ()     { return true; }
-   //J+
 
    /** @inheritDoc */
    protected String engineGetURI() {
@@ -58,7 +48,7 @@ public class TransformXPointer extends TransformSpi {
     * Method enginePerformTransform
     *
     * @param input
-    * @return
+    * @return  {@link XMLSignatureInput} as the result of transformation
     * @throws TransformationException
     *
     */

@@ -42,8 +42,7 @@ import java.util.logging.Logger;
 
 public class HmacSHA1 {
     
-    static Logger log = Logger.getLogger(HmacSHA1.class.getName());
-    
+    private static Logger log = Logger.getLogger("org.jcp.xml.dsig.internal");
     
     private static final int SHA1_BLOCK = 64;        // 512 bit block in SHA-1
     private byte[] key_opad;
@@ -79,26 +78,35 @@ public class HmacSHA1 {
         else {
             byte_length = -1;
         }
-        log.log(Level.FINE, "byte_length: " + byte_length);
+	if (log.isLoggable(Level.FINE)) {
+            log.log(Level.FINE, "byte_length: " + byte_length);
+	}
         initialized = true;
     }
     
     /**
      * update the engine with data
      *
-     * *@param data information to be signed or verified
+     * @param data information to be signed or verified
      */
     public void update(byte[] data) {
         this.digest.update(data);
     }
-    
+    public void update(byte data) {
+        this.digest.update(data);
+    }
+    public void update(byte[] data, int offset, int len) {
+        this.digest.update(data, offset, len);
+    }
+
     /**
      * Signs the data
      */
     public byte[] sign() throws SignatureException {
         
         if (byte_length == 0) {
-            throw new SignatureException("length should be -1 or greater than zero, but is " + byte_length);
+            throw new SignatureException
+	      ("length should be -1 or greater than zero, but is " + byte_length);
         }
         
         byte[] value = this.digest.digest();
@@ -146,5 +154,4 @@ public class HmacSHA1 {
         this.digest.reset();
         this.digest.update(key_ipad);
     }
-    
 }

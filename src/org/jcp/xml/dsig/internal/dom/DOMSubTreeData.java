@@ -1,5 +1,5 @@
 /*
- * Copyright 2005 The Apache Software Foundation.
+ * Copyright 2006 The Apache Software Foundation.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,11 +28,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
-import org.w3c.dom.DOMException;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
-import org.w3c.dom.traversal.NodeFilter;
-import org.w3c.dom.traversal.NodeIterator;
 
 /**
  * This is a subtype of NodeSetData that represents a dereferenced
@@ -41,97 +38,54 @@ import org.w3c.dom.traversal.NodeIterator;
  * directly on the subdocument and there is no need to convert it
  * first to an XPath node-set.
  */
-public class SubDocumentData implements NodeSetData {
+public class DOMSubTreeData implements NodeSetData {
 
-    public static final int SHOW_ALL_EXCEPT_COMMENTS =
-        NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_PROCESSING_INSTRUCTION | 
-        NodeFilter.SHOW_TEXT | NodeFilter.SHOW_CDATA_SECTION | 
-        NodeFilter.SHOW_DOCUMENT | NodeFilter.SHOW_ATTRIBUTE |
-        NodeFilter.SHOW_DOCUMENT_FRAGMENT | NodeFilter.SHOW_DOCUMENT_TYPE | 
-	NodeFilter.SHOW_ENTITY | NodeFilter.SHOW_ENTITY_REFERENCE | 
-        NodeFilter.SHOW_NOTATION;
+    private boolean excludeComments;
+    private Iterator ni;
+    private Node root;
 
-    private boolean withComments;
-    private NodeIterator ni;
-
-    public SubDocumentData(Node root, boolean withComments, 
-	NodeFilter twFilter) {
-	this.ni = new DelayedNodeIterator(root, withComments);
-	this.withComments = withComments;
+    public DOMSubTreeData(Node root, boolean excludeComments) {
+	this.root = root;
+	this.ni = new DelayedNodeIterator(root, excludeComments);
+	this.excludeComments = excludeComments;
     }
 
     public Iterator iterator() {
-        return new Iterator() {
-            public boolean hasNext() {
-                if (ni.nextNode() == null) {
-                    return false;
-                } else {
-                    ni.previousNode();
-                    return true;
-                }
-            }
-
-            public Object next() {
-                Node node = ni.nextNode();
-                if (node == null) {
-                    throw new NoSuchElementException();
-                } else {
-                    return node;
-                }
-            }
-
-            public void remove() {
-                throw new UnsupportedOperationException();
-            }
-        };
-    }
-
-    public boolean withComments() {
-	return withComments;
-    }
-
-    public NodeIterator nodeIterator() {
 	return ni;
     }
 
+    public Node getRoot() {
+	return root;
+    }
+
+    public boolean excludeComments() {
+	return excludeComments;
+    }
+
     /**
-     * This is a NodeIterator that contains a backing node-set that is
+     * This is an Iterator that contains a backing node-set that is
      * not populated until the caller first attempts to advance the iterator.
      */
-    static class DelayedNodeIterator implements NodeIterator {
+    static class DelayedNodeIterator implements Iterator {
     	private Node root;
 	private List nodeSet;
 	private ListIterator li;
-	private boolean detached = false;
 	private boolean withComments;
 
-	DelayedNodeIterator(Node root, boolean withComments) {
+	DelayedNodeIterator(Node root, boolean excludeComments) {
             this.root = root;
-            this.withComments = withComments;
+            this.withComments = !excludeComments;
 	}
 
-	public int getWhatToShow() {
-	    if (withComments) {
-	        // show everything 
-		return NodeFilter.SHOW_ALL;
-	    } else {
-	        // show everything but comment nodes
-		return SHOW_ALL_EXCEPT_COMMENTS;
-	    }
-	}
-
-	public Node getRoot() {
-            return root;
-	}
-
-	public NodeFilter getFilter() {
-            return null;
-	}
-
-	public Node nextNode() throws DOMException {
-            if (detached) {
-		throw new DOMException(DOMException.INVALID_STATE_ERR, "");
+        public boolean hasNext() {
+            if (nodeSet == null) {
+		nodeSet = dereferenceSameDocumentURI(root);
+		li = nodeSet.listIterator();
             }
+	    return li.hasNext();
+        }
+
+        public Object next() {
             if (nodeSet == null) {
 		nodeSet = dereferenceSameDocumentURI(root);
 		li = nodeSet.listIterator();
@@ -139,32 +93,13 @@ public class SubDocumentData implements NodeSetData {
             if (li.hasNext()) {
 		return (Node) li.next();
             } else {
-		return null;
+                throw new NoSuchElementException();
 	    }
-	}
+        }
 
-	public Node previousNode() throws DOMException {
-            if (detached) {
-		throw new DOMException(DOMException.INVALID_STATE_ERR, "");
-            }
-            if (nodeSet == null) {
-		nodeSet = dereferenceSameDocumentURI(root);
-		li = nodeSet.listIterator();
-            }
-            if (li.hasPrevious()) {
-		return (Node) li.previous();
-            } else {
-		return null;
-            }
-	}
-
-	public boolean getExpandEntityReferences() {
-            return true;
-	}
-
-	public void detach() {
-            detached = true;
-	}
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
 
 	/**
          * Dereferences a same-document URI fragment.
@@ -196,11 +131,12 @@ public class SubDocumentData implements NodeSetData {
 		case Node.ELEMENT_NODE :
                     NamedNodeMap attrs = node.getAttributes();
                     if (attrs != null) {
-                        for (int i = 0; i<attrs.getLength(); i++) {
+                        for (int i = 0, len = attrs.getLength(); i < len; i++) {
                             nodeSet.add(attrs.item(i));
                         }
                     }
                     nodeSet.add(node);
+		case Node.DOCUMENT_NODE :
                     Node pSibling = null;
                     for (Node child = node.getFirstChild(); child != null;
                         child = child.getNextSibling()) {

@@ -21,7 +21,6 @@ package org.apache.xml.security.c14n;
 import java.io.ByteArrayInputStream;
 import java.io.OutputStream;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -98,10 +97,10 @@ public class Canonicalizer {
            throws InvalidCanonicalizerException {
 
       try {
-         String implementingClass = getImplementingClass(algorithmURI);
+         Class implementingClass = getImplementingClass(algorithmURI);
 
          this.canonicalizerSpi =
-            (CanonicalizerSpi) Class.forName(implementingClass).newInstance();
+            (CanonicalizerSpi) implementingClass.newInstance();
          this.canonicalizerSpi.reset=true;
       } catch (Exception e) {
          Object exArgs[] = { algorithmURI };
@@ -137,16 +136,20 @@ public class Canonicalizer {
            throws AlgorithmAlreadyRegisteredException {
 
       // check whether URI is already registered
-      String registeredClass = getImplementingClass(algorithmURI);
+      Class registeredClass = getImplementingClass(algorithmURI);
 
-      if ((registeredClass != null) && (registeredClass.length() != 0)) {
+      if (registeredClass != null)  {
          Object exArgs[] = { algorithmURI, registeredClass };
 
          throw new AlgorithmAlreadyRegisteredException(
             "algorithm.alreadyRegistered", exArgs);
       }
 
-      _canonicalizerHash.put(algorithmURI, implementingClass);
+      try {
+		_canonicalizerHash.put(algorithmURI, Class.forName(implementingClass));
+	} catch (ClassNotFoundException e) {
+		throw new RuntimeException("c14n class not found");
+	}
    }
 
    /**
@@ -280,7 +283,7 @@ public class Canonicalizer {
               throws CanonicalizationException {
       return this.canonicalizerSpi.engineCanonicalizeXPathNodeSet(xpathNodeSet,
               inclusiveNamespaces);
-   }
+   } 
 
    /**
     * Canonicalizes an XPath node set.
@@ -291,7 +294,7 @@ public class Canonicalizer {
     */
    public byte[] canonicalizeXPathNodeSet(Set xpathNodeSet)
            throws CanonicalizationException {
-      return this.canonicalizerSpi.engineCanonicalizeXPathNodeSet(xpathNodeSet);
+       return this.canonicalizerSpi.engineCanonicalizeXPathNodeSet(xpathNodeSet);
    }
 
    /**
@@ -305,10 +308,10 @@ public class Canonicalizer {
    public byte[] canonicalizeXPathNodeSet(
            Set xpathNodeSet, String inclusiveNamespaces)
               throws CanonicalizationException {
-      return this.canonicalizerSpi.engineCanonicalizeXPathNodeSet(xpathNodeSet,
+       return this.canonicalizerSpi.engineCanonicalizeXPathNodeSet(xpathNodeSet,
               inclusiveNamespaces);
    }
-   
+
    /**
     * Sets the writter where the cannocalization ends. ByteArrayOutputStream if 
     * none is setted.
@@ -333,21 +336,14 @@ public class Canonicalizer {
     * @param URI
     * @return the name of the class that implements the give URI
     */
-   private static String getImplementingClass(String URI) {
-
-      Iterator i = _canonicalizerHash.keySet().iterator();
-
-      while (i.hasNext()) {
-         String key = (String) i.next();
-
-         if (key.equals(URI)) {
-            return (String) _canonicalizerHash.get(key);
-         }
-      }
-
-      return null;
+   private static Class getImplementingClass(String URI) {
+      return (Class) _canonicalizerHash.get(URI);         
    }
    
+   /**
+    * Set the canonicalizator behaviour to not reset.
+    *
+    */
    public void notReset() {
    	    this.canonicalizerSpi.reset=false;
    }

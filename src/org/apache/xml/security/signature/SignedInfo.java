@@ -33,6 +33,7 @@ import org.apache.xml.security.c14n.InvalidCanonicalizerException;
 import org.apache.xml.security.exceptions.XMLSecurityException;
 import org.apache.xml.security.utils.Constants;
 import org.apache.xml.security.utils.XMLUtils;
+import org.apache.xml.security.transforms.params.InclusiveNamespaces;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -52,6 +53,10 @@ public class SignedInfo extends Manifest {
 
    /** Field _c14nizedBytes           */
    private byte[] _c14nizedBytes = null;
+
+private Element c14nMethod;
+
+private Element signatureMethod;
 
    /**
     * Overwrites {@link Manifest#addDocument} because it creates another Element.
@@ -94,12 +99,12 @@ public class SignedInfo extends Manifest {
 
       // XMLUtils.addReturnToElement(this._constructionElement);
       {
-         Element canonElem = XMLUtils.createElementInSignatureSpace(this._doc,
+         c14nMethod = XMLUtils.createElementInSignatureSpace(this._doc,
                                 Constants._TAG_CANONICALIZATIONMETHOD);
 
-         canonElem.setAttributeNS(null, Constants._ATT_ALGORITHM,
+         c14nMethod.setAttributeNS(null, Constants._ATT_ALGORITHM,
                                 CanonicalizationMethodURI);
-         this._constructionElement.appendChild(canonElem);
+         this._constructionElement.appendChild(c14nMethod);
          XMLUtils.addReturnToElement(this._constructionElement);
       }
       {
@@ -111,8 +116,8 @@ public class SignedInfo extends Manifest {
                     SignatureMethodURI);
          }
 
-         this._constructionElement
-            .appendChild(this._signatureAlgorithm.getElement());
+         signatureMethod=this._signatureAlgorithm.getElement();
+         this._constructionElement.appendChild(signatureMethod);
          XMLUtils.addReturnToElement(this._constructionElement);
       }
    }
@@ -134,8 +139,9 @@ public class SignedInfo extends Manifest {
 
       this._signatureAlgorithm = new SignatureAlgorithm(SignatureMethodElem, null);
 
-      this._constructionElement
-         .appendChild(this._signatureAlgorithm.getElement());
+      signatureMethod=this._signatureAlgorithm.getElement();
+      this._constructionElement.appendChild(signatureMethod);
+      
       XMLUtils.addReturnToElement(this._constructionElement);
    }
 
@@ -158,6 +164,7 @@ public class SignedInfo extends Manifest {
        * and replace the original not-canonicalized ds:SignedInfo by
        * the re-parsed canonicalized one.
        */
+      c14nMethod=XMLUtils.getNextElement(element.getFirstChild());
       String c14nMethodURI=this.getCanonicalizationMethodURI();
      if (!(c14nMethodURI.equals("http://www.w3.org/TR/2001/REC-xml-c14n-20010315") ||
       		c14nMethodURI.equals("http://www.w3.org/TR/2001/REC-xml-c14n-20010315#WithComments") ||
@@ -193,8 +200,9 @@ public class SignedInfo extends Manifest {
          throw new XMLSecurityException("empty", ex);
       }
       }
+      signatureMethod=XMLUtils.getNextElement(c14nMethod.getNextSibling());
       this._signatureAlgorithm =
-         new SignatureAlgorithm(this.getSignatureMethodElement(),
+         new SignatureAlgorithm(signatureMethod,
                                 this.getBaseURI());
    }
 
@@ -266,8 +274,13 @@ public class SignedInfo extends Manifest {
    	if ((this._c14nizedBytes == null)) {
        Canonicalizer c14nizer =
           Canonicalizer.getInstance(this.getCanonicalizationMethodURI());
-       c14nizer.setWriter(os);       
-       c14nizer.canonicalizeSubtree(this._constructionElement);
+       c14nizer.setWriter(os);
+       String inclusiveNamespaces = this.getInclusiveNamespaces();
+
+       if(inclusiveNamespaces == null)
+        c14nizer.canonicalizeSubtree(this._constructionElement);
+       else
+        c14nizer.canonicalizeSubtree(this._constructionElement, inclusiveNamespaces);
     } else {
         try {
 			os.write(this._c14nizedBytes);
@@ -284,12 +297,8 @@ public class SignedInfo extends Manifest {
     */
    public String getCanonicalizationMethodURI() {
 
-    Element el= XMLUtils.selectDsNode(this._constructionElement.getFirstChild(),
-     Constants._TAG_CANONICALIZATIONMETHOD,0);
-     if (el==null) {
-     	return null;
-     }
-     return el.getAttributeNS(null, Constants._ATT_ALGORITHM);    
+     
+     return c14nMethod.getAttributeNS(null, Constants._ATT_ALGORITHM);    
    }
 
    /**
@@ -314,8 +323,7 @@ public class SignedInfo extends Manifest {
     *
     */
    public Element getSignatureMethodElement() {
-      return XMLUtils.selectDsNode(this._constructionElement.getFirstChild(),
-        Constants._TAG_SIGNATUREMETHOD,0);
+	   return signatureMethod;
    }
 
    /**
@@ -341,4 +349,33 @@ public class SignedInfo extends Manifest {
    public String getBaseLocalName() {
       return Constants._TAG_SIGNEDINFO;
    }
+
+   public String getInclusiveNamespaces() {
+
+    
+
+     String c14nMethodURI = c14nMethod.getAttributeNS(null, Constants._ATT_ALGORITHM);
+     if(!(c14nMethodURI.equals("http://www.w3.org/2001/10/xml-exc-c14n#") ||
+			c14nMethodURI.equals("http://www.w3.org/2001/10/xml-exc-c14n#WithComments"))) {
+                return null;
+            }
+
+     Element inclusiveElement = XMLUtils.getNextElement(
+    		 c14nMethod.getFirstChild());
+
+     if(inclusiveElement != null)
+     {
+         try
+         {
+             String inclusiveNamespaces = new InclusiveNamespaces(inclusiveElement,
+                         InclusiveNamespaces.ExclusiveCanonicalizationNamespace).getInclusiveNamespaces();
+             return inclusiveNamespaces;
+         }
+         catch (XMLSecurityException e)
+         {
+             return null;
+         }
+     }
+     return null;
+    }
 }

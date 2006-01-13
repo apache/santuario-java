@@ -20,10 +20,10 @@ package org.apache.xml.security.utils.resolver.implementations;
 
 import java.io.FileInputStream;
 
+import org.apache.xml.utils.URI;
 import org.apache.xml.security.signature.XMLSignatureInput;
 import org.apache.xml.security.utils.resolver.ResourceResolverException;
 import org.apache.xml.security.utils.resolver.ResourceResolverSpi;
-import org.apache.xml.utils.URI;
 import org.w3c.dom.Attr;
 
 
@@ -40,13 +40,7 @@ public class ResolverLocalFilesystem extends ResourceResolverSpi {
                     ResolverLocalFilesystem.class.getName());
 
    /**
-    * Method resolve
-    *
-    * @param uri
-    * @param BaseURI
-    * @return
-    * @throws ResourceResolverException
-    * @todo calculate the correct URI from the attribute and the BaseURI
+    * @inheritDoc
     */
    public XMLSignatureInput engineResolve(Attr uri, String BaseURI)
            throws ResourceResolverException {
@@ -78,7 +72,7 @@ public class ResolverLocalFilesystem extends ResourceResolverSpi {
     * Method translateUriToFilename
     *
     * @param uri
-    * @return
+    * @return the string of the filename
     */
    private static String translateUriToFilename(String uri) {
 
@@ -113,11 +107,7 @@ public class ResolverLocalFilesystem extends ResourceResolverSpi {
    }
 
    /**
-    * Method engineCanResolve
-    *
-    * @param uri
-    * @param BaseURI
-    * @return
+    * @inheritDoc
     */
    public boolean engineCanResolve(Attr uri, String BaseURI) {
 
@@ -127,21 +117,22 @@ public class ResolverLocalFilesystem extends ResourceResolverSpi {
 
       String uriNodeValue = uri.getNodeValue();
 
-      if (uriNodeValue.equals("") || uriNodeValue.startsWith("#")) {
+      if (uriNodeValue.equals("") || (uriNodeValue.charAt(0)=='#')) {
          return false;
       }
 
       try {
-         URI uriNew = new URI(new URI(BaseURI), uri.getNodeValue());
-         if (log.isDebugEnabled())
-         	log.debug("I was asked whether I can resolve " + uriNew.toString());
+	         //URI uriNew = new URI(new URI(BaseURI), uri.getNodeValue());
+	         if (log.isDebugEnabled())
+	         	log.debug("I was asked whether I can resolve " + uriNodeValue/*uriNew.toString()*/);
 
-         if (uriNew.getScheme().equals("file")) {
-            if (log.isDebugEnabled())
-            	log.debug("I state that I can resolve " + uriNew.toString());
+	         if ( uriNodeValue.startsWith("file:") ||
+					 BaseURI.startsWith("file:")/*uriNew.getScheme().equals("file")*/) {
+	            if (log.isDebugEnabled())
+	            	log.debug("I state that I can resolve " + uriNodeValue/*uriNew.toString()*/);
 
-            return true;
-         }
+	            return true;
+	         }
       } catch (Exception e) {}
 
       log.debug("But I can't");

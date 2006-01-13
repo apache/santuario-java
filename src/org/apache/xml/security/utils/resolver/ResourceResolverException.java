@@ -32,6 +32,10 @@ import org.w3c.dom.Attr;
 public class ResourceResolverException extends XMLSecurityException {
 
    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+   /**
     * Constructor ResourceResolverException
     *
     * @param _msgID
@@ -111,7 +115,7 @@ public class ResourceResolverException extends XMLSecurityException {
    
    /**
     * 
-    * @return
+    * @return the uri
     */
    public Attr getURI() {
       return this._uri;
@@ -129,7 +133,7 @@ public class ResourceResolverException extends XMLSecurityException {
    
    /**
     * 
-    * @return
+    * @return the basUri
     */
    public String getBaseURI() {
       return this._BaseURI;

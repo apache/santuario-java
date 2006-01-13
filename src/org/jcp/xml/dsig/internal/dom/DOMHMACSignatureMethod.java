@@ -38,6 +38,8 @@ import java.util.logging.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import org.jcp.xml.dsig.internal.MacOutputStream;
+
 /**
  * DOM-based implementation of HMAC SignatureMethod.
  *
@@ -45,7 +47,7 @@ import org.w3c.dom.Element;
  */
 public final class DOMHMACSignatureMethod extends DOMSignatureMethod {
 
-    static Logger log = Logger.getLogger(DOMHMACSignatureMethod.class.getName());
+    private static Logger log = Logger.getLogger("org.jcp.xml.dsig.internal.dom");
     private HmacSHA1 hmac = new HmacSHA1();
     private int outputLength;
 
@@ -77,8 +79,11 @@ public final class DOMHMACSignatureMethod extends DOMSignatureMethod {
 	            ("params must be of type HMACParameterSpec");
 	    }
 	    outputLength = ((HMACParameterSpec) params).getOutputLength();
-	    log.log(Level.FINE, "Setting outputLength from HMACParameterSpec to: "
-		+ outputLength);
+	    if (log.isLoggable(Level.FINE)) {
+	        log.log(Level.FINE, 
+		    "Setting outputLength from HMACParameterSpec to: "
+		    + outputLength);
+	    }
         } else {
 	    outputLength = -1;
         }
@@ -88,7 +93,9 @@ public final class DOMHMACSignatureMethod extends DOMSignatureMethod {
 	throws MarshalException {
         outputLength = new Integer
 	    (paramsElem.getFirstChild().getNodeValue()).intValue();
-        log.log(Level.FINE, "unmarshalled outputLength: " + outputLength);
+        if (log.isLoggable(Level.FINE)) {
+            log.log(Level.FINE, "unmarshalled outputLength: " + outputLength);
+	}
 	return new HMACParameterSpec(outputLength);
     }
 
@@ -104,23 +111,29 @@ public final class DOMHMACSignatureMethod extends DOMSignatureMethod {
         parent.appendChild(hmacElem);
     }
 
-    public boolean verify(Key key, byte[] data, byte[] sig) 
-	throws InvalidKeyException, SignatureException {
-        if (key == null || sig == null) {
-            throw new NullPointerException("key or signature data can't be null");
+    public boolean verify(Key key, DOMSignedInfo si, byte[] sig,
+	XMLValidateContext context) 
+	throws InvalidKeyException, SignatureException, XMLSignatureException {
+        if (key == null || si == null || sig == null) {
+            throw new NullPointerException
+		("key, signedinfo or signature data can't be null");
         }
-        log.log(Level.FINE, "outputLength = " + outputLength);
+        if (log.isLoggable(Level.FINE)) {
+            log.log(Level.FINE, "outputLength = " + outputLength);
+	}
         hmac.init(key, outputLength);
-        hmac.update(data);
+	si.canonicalize(context, new MacOutputStream(hmac));
         return hmac.verify(sig);
     }
 
-    public byte[] sign(Key key, byte[] data) throws InvalidKeyException {
-        if (key == null || data == null) {
+    public byte[] sign(Key key, DOMSignedInfo si, XMLSignContext context) 
+	throws InvalidKeyException, XMLSignatureException {
+        if (key == null || si == null) {
             throw new NullPointerException();
         }
         hmac.init(key, outputLength);
-        hmac.update(data);
+	si.canonicalize(context, new MacOutputStream(hmac));
+
         try {
             return hmac.sign();
         } catch (SignatureException se) {

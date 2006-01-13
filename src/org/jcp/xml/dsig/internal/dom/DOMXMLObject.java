@@ -63,7 +63,7 @@ public final class DOMXMLObject extends DOMStructure implements XMLObject {
             this.content = Collections.EMPTY_LIST;
         } else {
             List contentCopy = new ArrayList(content);
-            for (int i = 0; i < contentCopy.size(); i++) {
+            for (int i = 0, size = contentCopy.size(); i < size; i++) {
                 if (!(contentCopy.get(i) instanceof XMLStructure)) {
                     throw new ClassCastException
                         ("content["+i+"] is not a valid type");
@@ -90,24 +90,26 @@ public final class DOMXMLObject extends DOMStructure implements XMLObject {
         this.mimeType = DOMUtils.getAttributeValue(objElem, "MimeType");
 
 	NodeList nodes = objElem.getChildNodes();
-	List content = new ArrayList(nodes.getLength());
-	for (int i = 0; i < nodes.getLength(); i++) {
+	int length = nodes.getLength();
+	List content = new ArrayList(length);
+	for (int i = 0; i < length; i++) {
             Node child = nodes.item(i);
             if (child.getNodeType() == Node.ELEMENT_NODE) {
-                String tag = ((Element) child).getLocalName();
+		Element childElem = (Element) child;
+                String tag = childElem.getLocalName();
                 if (tag.equals("Manifest")) {
-                    content.add(new DOMManifest((Element) child, context));
+                    content.add(new DOMManifest(childElem, context));
 		    continue;
                 } else if (tag.equals("SignatureProperties")) {
-                    content.add(new DOMSignatureProperties((Element) child));
+                    content.add(new DOMSignatureProperties(childElem));
 		    continue;
                 } else if (tag.equals("X509Data")) {
-                    content.add(new DOMX509Data((Element) child));
+                    content.add(new DOMX509Data(childElem));
 		    continue;
 		}
 		//@@@FIXME: check for other dsig structures
 	    }
-	    content.add(new javax.xml.crypto.dom.DOMStructure(nodes.item(i)));
+	    content.add(new javax.xml.crypto.dom.DOMStructure(child));
 	}
         if (content.isEmpty()) {
             this.content = Collections.EMPTY_LIST;
@@ -145,9 +147,8 @@ public final class DOMXMLObject extends DOMStructure implements XMLObject {
         DOMUtils.setAttribute(objElem, "Encoding", encoding);
 
         // create and append any elements and mixed content, if necessary
-	Iterator i = content.iterator();
-	while (i.hasNext()) {
-            XMLStructure object = (XMLStructure) i.next();
+	for (int i = 0, size = content.size(); i < size; i++) {
+            XMLStructure object = (XMLStructure) content.get(i);
             if (object instanceof DOMStructure) {
                 ((DOMStructure) object).marshal(objElem, dsPrefix, context);
             } else {
@@ -185,7 +186,7 @@ public final class DOMXMLObject extends DOMStructure implements XMLObject {
 	if (content.size() != otherContent.size()) {
 	    return false;
 	}
-	for (int i = 0; i < otherContent.size(); i++) {
+	for (int i = 0, osize = otherContent.size(); i < osize; i++) {
 	    XMLStructure oxs = (XMLStructure) otherContent.get(i);
 	    XMLStructure xs = (XMLStructure) content.get(i);
 	    if (oxs instanceof javax.xml.crypto.dom.DOMStructure) {

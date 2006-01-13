@@ -53,6 +53,11 @@ import org.w3c.dom.Node;
 public class FuncHere extends Function {
 
    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+   /**
     * The here function returns a node-set containing the attribute or
     * processing instruction node or the parent element of the text node
     * that directly bears the XPath expression.  This expression results
@@ -60,7 +65,7 @@ public class FuncHere extends Function {
     * same XML document against which the XPath expression is being evaluated.
     *
     * @param xctxt
-    * @return
+    * @return the xobject
     * @throws javax.xml.transform.TransformerException
     */
    public XObject execute(XPathContext xctxt)

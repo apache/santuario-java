@@ -42,13 +42,13 @@ public final class Utils {
 	throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         byte[] buf = new byte[1024];
-        while(true) {
+        while (true) {
             int read = is.read(buf);
 	    if (read == -1) { // EOF
 		break;
 	    }
             baos.write(buf, 0, read);
-            if(read < 1024) {
+            if (read < 1024) {
                 break;
             }
         }
@@ -70,7 +70,7 @@ public final class Utils {
 	    // insert attributes nodes to comply with XPath
 	    if (n.getNodeType() == Node.ELEMENT_NODE) {
 	        NamedNodeMap nnm = n.getAttributes();
-		for (int j=0; j < nnm.getLength(); j++) {
+		for (int j = 0, length = nnm.getLength(); j < length; j++) {
 		    nodeSet.add(nnm.item(j));
 		}
 	    }
@@ -98,6 +98,6 @@ public final class Utils {
      * Returns true if uri is a same-document URI, false otherwise.
      */
     public static boolean sameDocumentURI(String uri) {
-	return (uri != null && (uri.length() == 0 || uri.startsWith("#")));
+	return (uri != null && (uri.length() == 0 || uri.charAt(0) == '#'));
     }
 }

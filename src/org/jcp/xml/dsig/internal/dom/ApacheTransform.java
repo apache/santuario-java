@@ -49,7 +49,7 @@ import javax.xml.crypto.dsig.spec.TransformParameterSpec;
  */
 public abstract class ApacheTransform extends TransformService {
 
-    static Logger log = Logger.getLogger(ApacheTransform.class.getName());
+    private static Logger log = Logger.getLogger("org.jcp.xml.dsig.internal.dom");
     private Transform apacheTransform;
     protected Document ownerDoc;
     protected Element transformElem;
@@ -112,8 +112,10 @@ public abstract class ApacheTransform extends TransformService {
                 apacheTransform = Transform.getInstance
 		    (ownerDoc, getAlgorithm(), transformElem.getChildNodes());
 		apacheTransform.setElement(transformElem, xc.getBaseURI());
-                log.log(Level.FINE, "Created transform for algorithm: " 
-		    + getAlgorithm());
+		if (log.isLoggable(Level.FINE)) {
+                    log.log(Level.FINE, "Created transform for algorithm: " 
+		        + getAlgorithm());
+		}
             } catch (Exception ex) {
                 throw new TransformException
 		    ("Couldn't find Transform for: " + getAlgorithm(), ex);
@@ -122,20 +124,30 @@ public abstract class ApacheTransform extends TransformService {
 
         XMLSignatureInput in;
 	if (data instanceof ApacheData) {
-            log.log(Level.FINE, "ApacheData = true");
+	    if (log.isLoggable(Level.FINE)) {
+                log.log(Level.FINE, "ApacheData = true");
+	    }
 	    in = ((ApacheData) data).getXMLSignatureInput();
 	} else if (data instanceof NodeSetData) {
-            log.log(Level.FINE, "isNodeSet() = true");
-	    if (data instanceof SubDocumentData) {
-		SubDocumentData sdd = (SubDocumentData) data;
-                in = new XMLSignatureInput(sdd.nodeIterator().getRoot());
+	    if (log.isLoggable(Level.FINE)) {
+                log.log(Level.FINE, "isNodeSet() = true");
+	    }
+	    if (data instanceof DOMSubTreeData) {
+		if (log.isLoggable(Level.FINE)) {
+                    log.log(Level.FINE, "DOMSubTreeData = true");
+                }
+		DOMSubTreeData subTree = (DOMSubTreeData) data;
+                in = new XMLSignatureInput(subTree.getRoot());
+		in.setExcludeComments(subTree.excludeComments());
 	    } else {
 		Set nodeSet = 
 		    Utils.toNodeSet(((NodeSetData) data).iterator());
                 in = new XMLSignatureInput(nodeSet);
 	    }
         } else {
-            log.log(Level.FINE, "isNodeSet() = false");
+	    if (log.isLoggable(Level.FINE)) {
+                log.log(Level.FINE, "isNodeSet() = false");
+	    }
             try {
                 in = new XMLSignatureInput
 		    (((OctetStreamData)data).getOctetStream());

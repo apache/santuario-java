@@ -1,22 +1,4 @@
-/*
- * Copyright  1999-2004 The Apache Software Foundation.
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- */
 package org.apache.xml.security.exceptions;
-
-
 
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -25,9 +7,8 @@ import java.text.MessageFormat;
 import org.apache.xml.security.utils.Constants;
 import org.apache.xml.security.utils.I18n;
 
-
 /**
- * The mother of all Exceptions in this bundle. It allows exceptions to have
+ * The mother of all runtime Exceptions in this bundle. It allows exceptions to have
  * their messages translated to the different locales.
  *
  * The <code>xmlsecurity_en.properties</code> file contains this line:
@@ -58,14 +39,12 @@ import org.apache.xml.security.utils.I18n;
  *
  * @author Christian Geuer-Pollmann
  */
-public class XMLSecurityException extends Exception {
-
-	
-	
+public class XMLSecurityRuntimeException
+        extends RuntimeException {
    /**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
+     * 
+     */
+    private static final long serialVersionUID = 1L;
 
    /** Field originalException */
    protected Exception originalException = null;
@@ -74,10 +53,10 @@ public class XMLSecurityException extends Exception {
    protected String msgID;
 
    /**
-    * Constructor XMLSecurityException
+    * Constructor XMLSecurityRuntimeException
     *
     */
-   public XMLSecurityException() {
+   public XMLSecurityRuntimeException() {
 
       super("Missing message string");
 
@@ -86,11 +65,11 @@ public class XMLSecurityException extends Exception {
    }
 
    /**
-    * Constructor XMLSecurityException
+    * Constructor XMLSecurityRuntimeException
     *
     * @param _msgID
     */
-   public XMLSecurityException(String _msgID) {
+   public XMLSecurityRuntimeException(String _msgID) {
 
       super(I18n.getExceptionMessage(_msgID));
 
@@ -99,12 +78,12 @@ public class XMLSecurityException extends Exception {
    }
 
    /**
-    * Constructor XMLSecurityException
+    * Constructor XMLSecurityRuntimeException
     *
     * @param _msgID
     * @param exArgs
     */
-   public XMLSecurityException(String _msgID, Object exArgs[]) {
+   public XMLSecurityRuntimeException(String _msgID, Object exArgs[]) {
 
       super(MessageFormat.format(I18n.getExceptionMessage(_msgID), exArgs));
 
@@ -113,11 +92,11 @@ public class XMLSecurityException extends Exception {
    }
 
    /**
-    * Constructor XMLSecurityException
+    * Constructor XMLSecurityRuntimeException
     *
     * @param _originalException
     */
-   public XMLSecurityException(Exception _originalException) {
+   public XMLSecurityRuntimeException(Exception _originalException) {
 
       super("Missing message ID to locate message string in resource bundle \""
             + Constants.exceptionMessagesResourceBundleBase
@@ -129,12 +108,12 @@ public class XMLSecurityException extends Exception {
    }
 
    /**
-    * Constructor XMLSecurityException
+    * Constructor XMLSecurityRuntimeException
     *
     * @param _msgID
     * @param _originalException
     */
-   public XMLSecurityException(String _msgID, Exception _originalException) {
+   public XMLSecurityRuntimeException(String _msgID, Exception _originalException) {
 
       super(I18n.getExceptionMessage(_msgID, _originalException));
 
@@ -143,13 +122,13 @@ public class XMLSecurityException extends Exception {
    }
 
    /**
-    * Constructor XMLSecurityException
+    * Constructor XMLSecurityRuntimeException
     *
     * @param _msgID
     * @param exArgs
     * @param _originalException
     */
-   public XMLSecurityException(String _msgID, Object exArgs[],
+   public XMLSecurityRuntimeException(String _msgID, Object exArgs[],
                                Exception _originalException) {
 
       super(MessageFormat.format(I18n.getExceptionMessage(_msgID), exArgs));

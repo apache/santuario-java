@@ -81,22 +81,11 @@ public class TransformBase64Decode extends TransformSpi {
       return TransformBase64Decode.implementedTransformURI;
    }
 
-   //J-
-   /** @inheritDoc */
-   public boolean wantsOctetStream ()   { return true; }
-   /** @inheritDoc */
-   public boolean wantsNodeSet ()       { return true; }
-   /** @inheritDoc */
-   public boolean returnsOctetStream () { return true; }
-   /** @inheritDoc */
-   public boolean returnsNodeSet ()     { return false; }
-   //J+
-
    /**
     * Method enginePerformTransform
     *
     * @param input
-    * @return
+    * @return {@link XMLSignatureInput} as the result of transformation
     * @inheritDoc
     * @throws CanonicalizationException
     * @throws IOException
@@ -137,7 +126,7 @@ public class TransformBase64Decode extends TransformSpi {
             byte[] decodedBytes = Base64.decode(base64Bytes);            
             return new XMLSignatureInput(decodedBytes);
          } 
-        if (input.isByteArray()) {
+        if (input.isByteArray() || input.isNodeSet()) {
                Base64.decode(input.getBytes(),os);
         } else {
             Base64.decode(new BufferedInputStream(input.getOctetStreamReal())

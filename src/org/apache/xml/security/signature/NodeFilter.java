@@ -1,4 +1,3 @@
-
 /*
  * Copyright  1999-2004 The Apache Software Foundation.
  *
@@ -15,23 +14,21 @@
  *  limitations under the License.
  *
  */
-package org.apache.xml.security.keys.storage;
+package org.apache.xml.security.signature;
 
-
-
-import java.util.Iterator;
-
+import org.w3c.dom.Node;
 
 /**
+ * An interface to tell to the c14n if a node is included or not in the output
+ * @author raul
  *
- * @author $Author$
  */
-public abstract class StorageResolverSpi {
+public interface NodeFilter {
+	/**
+	 * Tells if a node must be outputed in c14n.
+	 * @param n
+	 * @return true if node must be outputed, false otherwise.
+	 */
+	public boolean isNodeInclude(Node n);
 
-   /**
-    * Method getIterator
-    *
-    * @return the iterator for the storage
-    */
-   public abstract Iterator getIterator();
 }

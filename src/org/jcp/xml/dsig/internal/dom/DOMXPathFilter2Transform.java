@@ -97,8 +97,9 @@ public final class DOMXPathFilter2Transform extends ApacheTransform {
             }
 	    NamedNodeMap attributes = curXPathElem.getAttributes();
 	    if (attributes != null) {
-	        Map namespaceMap = new HashMap(attributes.getLength());
-	        for (int i = 0; i < attributes.getLength(); i++) {
+		int length = attributes.getLength();
+	        Map namespaceMap = new HashMap(length);
+	        for (int i = 0; i < length; i++) {
 	    	    Attr attr = (Attr) attributes.item(i);
 	    	    String prefix = attr.getPrefix();
 	    	    if (prefix != null && prefix.equals("xmlns")) {
@@ -122,27 +123,23 @@ public final class DOMXPathFilter2Transform extends ApacheTransform {
 	XPathFilter2ParameterSpec xp = 
 	    (XPathFilter2ParameterSpec) getParameterSpec();
         String prefix = DOMUtils.getNSPrefix(context, Transform.XPATH2);
-	Iterator list = xp.getXPathList().iterator();
-        while (list.hasNext()) {               
-            XPathType xpathType = (XPathType)list.next();
+	String qname = (prefix == null) ? "xmlns" : "xmlns:" + prefix;
+	List list = xp.getXPathList();
+	for (int i = 0, size = list.size(); i < size; i++) {
+            XPathType xpathType = (XPathType) list.get(i);
             Element elem = DOMUtils.createElement
                 (ownerDoc, "XPath", Transform.XPATH2, prefix);
             elem.appendChild
 		(ownerDoc.createTextNode(xpathType.getExpression()));
 	    DOMUtils.setAttribute
 		(elem, "Filter", xpathType.getFilter().toString());
-	    if (prefix == null) {
-                elem.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns", 
-		    Transform.XPATH2);
-	    } else {
-                elem.setAttributeNS("http://www.w3.org/2000/xmlns/", 
-		    "xmlns:" + prefix, Transform.XPATH2);
-	    }
+            elem.setAttributeNS("http://www.w3.org/2000/xmlns/", qname, 
+	        Transform.XPATH2);
 
             // add namespace attributes, if necessary
-            Iterator i = xpathType.getNamespaceMap().entrySet().iterator();
-            while (i.hasNext()) {
-                Map.Entry entry = (Map.Entry) i.next();
+            Iterator it = xpathType.getNamespaceMap().entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry entry = (Map.Entry) it.next();
                 elem.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:"
                     + (String) entry.getKey(), (String) entry.getValue());
             }

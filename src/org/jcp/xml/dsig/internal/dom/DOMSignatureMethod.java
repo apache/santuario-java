@@ -158,32 +158,39 @@ public abstract class DOMSignatureMethod extends DOMStructure
      * underlying signature or MAC algorithm.
      *
      * @param key the verification key
+     * @param si the DOMSignedInfo
      * @param signature the signature bytes to be verified
+     * @param context the XMLValidateContext
      * @return <code>true</code> if the signature verified successfully,
      *    <code>false</code> if not
-     * @throws NullPointerException if <code>key</code> or
+     * @throws NullPointerException if <code>key</code>, <code>si</code> or
      *    <code>signature</code> are <code>null</code>
      * @throws InvalidKeyException if the key is improperly encoded, of
      *    the wrong type, or parameters are missing, etc
      * @throws SignatureException if an unexpected error occurs, such
      *    as the passed in signature is improperly encoded
+     * @throws XMLSignatureException if an unexpected error occurs
      */
-    public abstract boolean verify(Key key, byte[] data, byte[] signature)
-        throws InvalidKeyException, SignatureException;
+    public abstract boolean verify(Key key, DOMSignedInfo si, byte[] signature,
+	XMLValidateContext context) throws InvalidKeyException, SignatureException,
+	XMLSignatureException;
 
     /**
-     * Signs the specified bytes with the specified key, using the underlying
+     * Signs the bytes with the specified key, using the underlying
      * signature or MAC algorithm.
      *
      * @param key the signing key
-     * @param data the bytes to be signed
+     * @param si the DOMSignedInfo
+     * @param context the XMLSignContext
      * @return the signature
      * @throws NullPointerException if <code>key</code> or
-     *    <code>data</code> are <code>null</code>
+     *    <code>si</code> are <code>null</code>
      * @throws InvalidKeyException if the key is improperly encoded, of
      *    the wrong type, or parameters are missing, etc
+     * @throws XMLSignatureException if an unexpected error occurs
      */
-    public abstract byte[] sign(Key key, byte[] data) throws InvalidKeyException;
+    public abstract byte[] sign(Key key, DOMSignedInfo si, XMLSignContext context) 
+        throws InvalidKeyException, XMLSignatureException;
 
     /**
      * Marshals the algorithm-specific parameters to an Element and

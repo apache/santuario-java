@@ -71,7 +71,7 @@ import org.w3c.dom.NodeList;
  * for child elements of <CODE>ds:KeyInfo</CODE> for known types. </LI>
  * <LI>If the <CODE>KeyInfo</CODE> was constructed from scratch (during
  * Signature generation), the <CODE>lengthXXX()</CODE> methods return the number
- * of <CODE>XXX</CODE> objects already passed to the KeyInfo</LI>
+ * of <CODE>XXXs</CODE> objects already passed to the KeyInfo</LI>
  * </UL>
  * <BR />
  * The <CODE>addXXX()</CODE> methods are used for adding Objects of the
@@ -581,8 +581,8 @@ public class KeyInfo extends SignatureElementProxy {
    /**
     * Method itemUnknownElement
     *
-    * @param i
-    * @return
+    * @param i index
+    * @return the element number of the unknown elemens
     */
    public Element itemUnknownElement(int i) {
 
@@ -1155,7 +1155,7 @@ public class KeyInfo extends SignatureElementProxy {
 
    /**
     * Method lengthInternalKeyResolver
-    * @return
+    * @return the length of the key
     */
    int lengthInternalKeyResolver() {
       return this._internalKeyResolvers.size();
@@ -1164,8 +1164,8 @@ public class KeyInfo extends SignatureElementProxy {
    /**
     * Method itemInternalKeyResolver
     *
-    * @param i
-    * @return
+    * @param i the index
+    * @return the KeyResolverSpi for the index.
     */
    KeyResolverSpi itemInternalKeyResolver(int i) {
       return (KeyResolverSpi) this._internalKeyResolvers.get(i);
@@ -1189,7 +1189,7 @@ public class KeyInfo extends SignatureElementProxy {
    /**
     * Method getStorageResolvers
     *
-    * @return
+    * @return the internalStorages
     */
    List getStorageResolvers() {
       return this._storageResolvers;

@@ -248,7 +248,7 @@ public class DOMUtils {
      */
     public static void removeAllChildren(Node node) {
         NodeList children = node.getChildNodes();
-        for (int i = 0; i < children.getLength(); i++) {
+        for (int i = 0, length = children.getLength(); i < length; i++) {
             node.removeChild(children.item(i));
         }
     }
@@ -314,10 +314,11 @@ public class DOMUtils {
 
         List types = spec1.getXPathList();
         List otypes = spec2.getXPathList();
-        if (types.size() != otypes.size()) {
+	int size = types.size();
+        if (size != otypes.size()) {
             return false;
         }
-        for (int i=0; i<types.size(); i++) {
+        for (int i = 0; i < size; i++) {
             XPathType type = (XPathType) types.get(i);
             XPathType otype = (XPathType) otypes.get(i);
             if (!type.getExpression().equals(otype.getExpression()) ||

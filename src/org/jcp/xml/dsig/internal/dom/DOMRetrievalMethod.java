@@ -85,7 +85,7 @@ public final class DOMRetrievalMethod extends DOMStructure
             this.transforms = Collections.EMPTY_LIST;
         } else {
             List transformsCopy = new ArrayList(transforms);
-            for (int i = 0; i < transformsCopy.size(); i++) {
+            for (int i = 0, size = transformsCopy.size(); i < size; i++) {
                 if (!(transformsCopy.get(i) instanceof Transform)) {
                     throw new ClassCastException
                         ("transforms["+i+"] is not a valid type");
@@ -165,9 +165,8 @@ public final class DOMRetrievalMethod extends DOMStructure
 	    Element transformsElem = DOMUtils.createElement
                 (ownerDoc, "Transforms", XMLSignature.XMLNS, dsPrefix);
 	    rmElem.appendChild(transformsElem);
-	    Iterator i = transforms.iterator();
-	    while (i.hasNext()) {
-	        ((DOMTransform) i.next()).marshal
+	    for (int i = 0, size = transforms.size(); i < size; i++) {
+	        ((DOMTransform) transforms.get(i)).marshal
 		    (transformsElem, dsPrefix, context);
             }
 	}
@@ -201,10 +200,9 @@ public final class DOMRetrievalMethod extends DOMStructure
 	Data data = deref.dereference(this, context);
 
         // pass dereferenced data through Transforms
-        Iterator i = transforms.iterator();
 	try {
-            while (i.hasNext()) {
-                Transform transform = (Transform) i.next();
+	    for (int i = 0, size = transforms.size(); i < size; i++) {
+                Transform transform = (Transform) transforms.get(i);
                 data = ((DOMTransform) transform).transform(data, context);
             }
 	} catch (Exception e) {

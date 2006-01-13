@@ -71,7 +71,7 @@ public final class DOMPGPData extends DOMStructure implements PGPData {
 	    this.externalElements = Collections.EMPTY_LIST;
 	} else {
             List otherCopy = new ArrayList(other);
-            for (int i = 0; i < otherCopy.size(); i++) {
+            for (int i = 0, size = otherCopy.size(); i < size; i++) {
                 if (!(otherCopy.get(i) instanceof XMLStructure)) {
                     throw new ClassCastException
                         ("other["+i+"] is not a valid PGPData type");
@@ -116,7 +116,7 @@ public final class DOMPGPData extends DOMStructure implements PGPData {
 	    this.externalElements = Collections.EMPTY_LIST;
 	} else {
             List otherCopy = new ArrayList(other);
-            for (int i = 0; i < otherCopy.size(); i++) {
+            for (int i = 0, size = otherCopy.size(); i < size; i++) {
                 if (!(otherCopy.get(i) instanceof XMLStructure)) {
                     throw new ClassCastException
                         ("other["+i+"] is not a valid PGPData type");
@@ -141,15 +141,17 @@ public final class DOMPGPData extends DOMStructure implements PGPData {
 	byte[] keyId = null;
 	byte[] keyPacket = null;
         NodeList nl = pdElem.getChildNodes();
-	List other = new ArrayList(nl.getLength());
-        for (int x = 0; x < nl.getLength(); x++) {
+	int length = nl.getLength();
+	List other = new ArrayList(length);
+        for (int x = 0; x < length; x++) {
             Node n = nl.item(x);
             if (n.getNodeType() == Node.ELEMENT_NODE) {
                 Element childElem = (Element) n;
+		String localName = childElem.getLocalName();
 		try {
-                    if (childElem.getLocalName().equals("PGPKeyID")) {
+                    if (localName.equals("PGPKeyID")) {
                         keyId = Base64.decode(childElem);
-                    } else if (childElem.getLocalName().equals("PGPKeyPacket")){
+                    } else if (localName.equals("PGPKeyPacket")){
                         keyPacket = Base64.decode(childElem);
                     } else {
 		        other.add
@@ -203,10 +205,9 @@ public final class DOMPGPData extends DOMStructure implements PGPData {
         }
 
         // create and append any elements
-	Iterator i = externalElements.iterator();
-	while (i.hasNext()) {
-	    DOMUtils.appendChild(pdElem,
-		((javax.xml.crypto.dom.DOMStructure) i.next()).getNode());
+	for (int i = 0, size = externalElements.size(); i < size; i++) {
+	    DOMUtils.appendChild(pdElem, ((javax.xml.crypto.dom.DOMStructure) 
+		externalElements.get(i)).getNode());
         }
 
         parent.appendChild(pdElem);

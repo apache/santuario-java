@@ -21,7 +21,6 @@ package org.apache.xml.security.utils.resolver;
 import java.util.Map;
 
 import org.apache.xml.security.signature.XMLSignatureInput;
-import org.apache.xml.utils.URI;
 import org.w3c.dom.Attr;
 
 
@@ -45,7 +44,7 @@ public abstract class ResourceResolverSpi {
     *
     * @param uri
     * @param BaseURI
-    * @return
+    * @return the resource wrapped arround a XMLSignatureInput
     *
     * @throws ResourceResolverException
     */
@@ -79,7 +78,7 @@ public abstract class ResourceResolverSpi {
     * Method engineGetProperty
     *
     * @param key
-    * @return
+    * @return the value of the property
     */
    public String engineGetProperty(String key) {
 
@@ -112,14 +111,14 @@ public abstract class ResourceResolverSpi {
     *
     * @param uri
     * @param BaseURI
-    * @return
+    * @return true if the engine can resolve the uri
     */
    public abstract boolean engineCanResolve(Attr uri, String BaseURI);
 
    /**
     * Method engineGetPropertyKeys
     *
-    * @return
+    * @return the property keys
     */
    public String[] engineGetPropertyKeys() {
       return new String[0];
@@ -129,7 +128,7 @@ public abstract class ResourceResolverSpi {
     * Method understandsProperty
     *
     * @param propertyToTest
-    * @return
+    * @return true if understands the property
     */
    public boolean understandsProperty(String propertyToTest) {
 
@@ -146,88 +145,6 @@ public abstract class ResourceResolverSpi {
       return false;
    }
 
-   /**
-    * Expands a system id and returns the system id as a URL, if
-    * it can be expanded. A return value of null means that the
-    * identifier is already expanded. An exception thrown
-    * indicates a failure to expand the id.
-    *
-    * @param systemId The systemId to be expanded.
-    * @param currentSystemId
-    *
-    * @return Returns the URL object representing the expanded system
-    *         identifier. A null value indicates that the given
-    *         system identifier is already expanded.
-    *
-    * @throws Exception
-    */
-   public static String expandSystemId(String systemId, String currentSystemId)
-           throws Exception {
-
-      String id = systemId;
-
-      // check for bad parameters id
-      if ((id == null) || (id.length() == 0)) {
-         return systemId;
-      }
-
-      // if id already expanded, return
-      try {
-         URI url = new URI(id);
-
-         if (url != null) {
-            return systemId;
-         }
-      } catch (Exception e) {
-
-         // continue on...
-      }
-
-      // normalize id
-      id = ResourceResolverSpi.fixURI(id);
-
-      // normalize base
-      URI base = null;
-      URI url = null;
-
-      try {
-         if (currentSystemId == null) {
-            String dir;
-
-            try {
-               dir = ResourceResolverSpi.fixURI(System.getProperty("user.dir"));
-            } catch (SecurityException se) {
-               dir = "";
-            }
-
-            if (!dir.endsWith("/")) {
-               dir = dir + "/";
-            }
-
-            final String protocol = "file";
-            final String host = "";
-
-            base = new URI(protocol, host, dir, null, null);
-         } else {
-
-            // should we fix currentSystemId?
-            currentSystemId = ResourceResolverSpi.fixURI(currentSystemId);
-            base = new URI(currentSystemId);
-         }
-
-         // expand id
-         url = new URI(base, id);
-      } catch (Exception e) {
-
-         // let it go through
-      }
-
-      if (url == null) {
-         return systemId;
-      }
-
-      return url.toString();
-   }
 
    /**
     * Fixes a platform dependent filename to standard URI form.

@@ -71,9 +71,9 @@ public class AttrCompare implements java.util.Comparator {
       String namespaceURI1 = attr1.getNamespaceURI();
       
       boolean isNamespaceAttr0 =
-      	XMLNS.equals(namespaceURI0);
+      	XMLNS==namespaceURI0;
       boolean isNamespaceAttr1 =
-      	XMLNS.equals(namespaceURI1);
+      	XMLNS==namespaceURI1;
 
       if (isNamespaceAttr0) {
          if (isNamespaceAttr1) {
@@ -127,11 +127,12 @@ public class AttrCompare implements java.util.Comparator {
       if (a != 0) {
       	return a;
       }
+      /*
+      String localName0 = ;
+      String localName1 =;*/
       
-      String localName0 = attr0.getLocalName();
-      String localName1 = attr1.getLocalName();
-      
-      return localName0.compareTo(localName1);
+      return (attr0.getLocalName())
+      				.compareTo( attr1.getLocalName());
          
    }
          

@@ -44,6 +44,7 @@ import org.w3c.dom.Node;
  */
 public abstract class Canonicalizer20010315 extends CanonicalizerBase {
 	boolean firstCall=true;
+	final SortedSet result= new TreeSet(COMPARE);
     static final String XMLNS_URI=Constants.NamespaceSpecNS;
     static final String XML_LANG_URI=Constants.XML_LANG_SPACE_SpecNS;
    /**
@@ -74,23 +75,24 @@ public abstract class Canonicalizer20010315 extends CanonicalizerBase {
    	  if (!E.hasAttributes() && !firstCall) {
          return null; 
       }
-      // result will contain the attrs which have to be outputted
-      SortedSet result = new TreeSet(COMPARE);      
+      // result will contain the attrs which have to be outputted   	  
+      final SortedSet result = this.result;       
+      result.clear();
       NamedNodeMap attrs = E.getAttributes();
       int attrsLength = attrs.getLength();      
             
       for (int i = 0; i < attrsLength; i++) {
          Attr N = (Attr) attrs.item(i);
-         String NName=N.getLocalName();
-         String NValue=N.getValue();
          String NUri =N.getNamespaceURI();
 
-         if (!XMLNS_URI.equals(NUri)) {
+         if (XMLNS_URI!=NUri) {
          	//It's not a namespace attr node. Add to the result and continue.
             result.add(N);
             continue;
          }
-         
+
+         String NName=N.getLocalName();
+         String NValue=N.getValue();        
          if (XML.equals(NName)
                  && XML_LANG_URI.equals(NValue)) {
          	//The default mapping for xml must not be output.
@@ -133,7 +135,6 @@ public abstract class Canonicalizer20010315 extends CanonicalizerBase {
          Map loa = new HashMap();
 
          if ((parent != null) && (parent.getNodeType() == Node.ELEMENT_NODE)) {
-
             // parent element is not in node set
             for (Node ancestor = parent;
                     (ancestor != null)
@@ -145,25 +146,15 @@ public abstract class Canonicalizer20010315 extends CanonicalizerBase {
                }
                // for all ancestor elements
                NamedNodeMap ancestorAttrs = el.getAttributes();
-
-               for (int i = 0; i < ancestorAttrs.getLength(); i++) {
+               int length=ancestorAttrs.getLength();
+               for (int i = 0; i <  length; i++) {
                   // for all attributes in the ancestor element
-                  Attr currentAncestorAttr = (Attr) ancestorAttrs.item(i);
-
-                  if (XML_LANG_URI.equals(
-                          currentAncestorAttr.getNamespaceURI())) {
-
-                     // do we have an xml:* ?
-                     if (!E.hasAttributeNS(
-                             XML_LANG_URI,
-                             currentAncestorAttr.getLocalName())) {
-
-                        // the xml:* attr is not in E
-                        if (!loa.containsKey(currentAncestorAttr.getName())) {
-                           loa.put(currentAncestorAttr.getName(),
-                                   currentAncestorAttr);
-                        }
-                     }
+                  Attr currentAncestorAttr = (Attr) ancestorAttrs.item(i);				  
+                  if (XML_LANG_URI==currentAncestorAttr.getNamespaceURI()) {
+                	  String name=currentAncestorAttr.getName();                  
+                      if (!loa.containsKey(name) ) {
+                           loa.put(name, currentAncestorAttr);                                             
+                      }
                   }
                }
             }
@@ -187,7 +178,7 @@ public abstract class Canonicalizer20010315 extends CanonicalizerBase {
     */
    Iterator handleAttributes(Element E,  NameSpaceSymbTable ns ) throws CanonicalizationException {    
     // result will contain the attrs which have to be outputted
-    boolean isRealVisible=this._xpathNodeSet.contains(E);    
+    boolean isRealVisible=isVisible(E);    
     NamedNodeMap attrs = null;
     int attrsLength = 0;
     if (E.hasAttributes()) {
@@ -196,16 +187,15 @@ public abstract class Canonicalizer20010315 extends CanonicalizerBase {
     }
     
     
-    SortedSet result = new TreeSet(COMPARE);
+    SortedSet result = this.result;       
+    result.clear();
     
             
     for (int i = 0; i < attrsLength; i++) {
        Attr N = (Attr) attrs.item(i);
-       String NName=N.getLocalName();
-       String NValue=N.getValue();
        String NUri =N.getNamespaceURI();
        
-       if (!XMLNS_URI.equals(NUri)) {
+       if (XMLNS_URI!=NUri) {
        	  //A non namespace definition node.
        	  if (isRealVisible){
        		//The node is visible add the attribute to the list of output attributes.
@@ -215,7 +205,8 @@ public abstract class Canonicalizer20010315 extends CanonicalizerBase {
           continue;
        }
 
-              
+       String NName=N.getLocalName();
+       String NValue=N.getValue();              
        if ("xml".equals(NName)
                && XML_LANG_URI.equals(NValue)) {
           /* except omit namespace node with local name xml, which defines
@@ -225,7 +216,7 @@ public abstract class Canonicalizer20010315 extends CanonicalizerBase {
        }
        //add the prefix binding to the ns symb table.
        //ns.addInclusiveMapping(NName,NValue,N,isRealVisible);          
-	    if  (this._xpathNodeSet.contains(N))  {
+	    if  (isVisible(N))  {
 			    //The xpath select this node output it if needed.
 	    		Node n=ns.addMappingAndRenderXNodeSet(NName,NValue,N,isRealVisible); 	    		
 		 	 	if (n!=null) {
@@ -245,7 +236,7 @@ public abstract class Canonicalizer20010315 extends CanonicalizerBase {
         if (xmlns == null) {
         	//No xmlns def just get the already defined.
         	n=ns.getMapping(XMLNS);        		
-        } else if ( !this._xpathNodeSet.contains(xmlns)) {
+        } else if ( !isVisible(xmlns)) {
         	//There is a definition but the xmlns is not selected by the xpath.
         	//then xmlns=""
         	n=ns.addMappingAndRenderXNodeSet(XMLNS,"",nullNode,true);        	    		      	
@@ -285,7 +276,7 @@ public abstract class Canonicalizer20010315 extends CanonicalizerBase {
          Map loa = new HashMap();
 
          if ((parent != null) && (parent.getNodeType() == Node.ELEMENT_NODE)
-                 &&!this._xpathNodeSet.contains(parent)) {
+                 &&!isVisible(parent)) {
 
             // parent element is not in node set
             for (Node ancestor = parent;
@@ -298,27 +289,16 @@ public abstract class Canonicalizer20010315 extends CanonicalizerBase {
                 }
                // for all ancestor elements
                NamedNodeMap ancestorAttrs =el.getAttributes();
-
-               for (int i = 0; i < ancestorAttrs.getLength(); i++) {
-
+               int length=ancestorAttrs.getLength();
+               for (int i = 0; i < length; i++) {
                   // for all attributes in the ancestor element
                   Attr currentAncestorAttr = (Attr) ancestorAttrs.item(i);
-
-                  if (XML_LANG_URI.equals(
-                          currentAncestorAttr.getNamespaceURI())) {
-
-                     // do we have an xml:* ?
-                     if (!E.hasAttributeNS(
-                             XML_LANG_URI,
-                             currentAncestorAttr.getLocalName())) {
-
-                        // the xml:* attr is not in E
-                        if (!loa.containsKey(currentAncestorAttr.getName())) {
-                           loa.put(currentAncestorAttr.getName(),
-                                   currentAncestorAttr);
-                        }
-                     }
-                  }
+                  if (XML_LANG_URI==currentAncestorAttr.getNamespaceURI()) {
+                	  String name=currentAncestorAttr.getName();                  
+                      if (!loa.containsKey(name) ) {
+                           loa.put(name, currentAncestorAttr);                                             
+                      }
+                  }                  
                }
             }
          }

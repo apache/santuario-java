@@ -48,7 +48,7 @@ import org.w3c.dom.NodeList;
 
 public abstract class ApacheCanonicalizer extends TransformService {
 
-    static Logger log = Logger.getLogger(ApacheCanonicalizer.class.getName());
+    private static Logger log = Logger.getLogger("org.jcp.xml.dsig.internal.dom");
     protected Canonicalizer apacheCanonicalizer;
     private Transform apacheTransform;
     protected String inclusiveNamespaces;
@@ -93,8 +93,10 @@ public abstract class ApacheCanonicalizer extends TransformService {
 	if (apacheCanonicalizer == null) {
 	    try {
                 apacheCanonicalizer = Canonicalizer.getInstance(getAlgorithm());
-                log.log(Level.FINE, "Created canonicalizer for algorithm: " 
-		    + getAlgorithm());
+		if (log.isLoggable(Level.FINE)) {
+                    log.log(Level.FINE, "Created canonicalizer for algorithm: " 
+		        + getAlgorithm());
+		}
 	    } catch (InvalidCanonicalizerException ice) {
                 throw new TransformException
 		    ("Couldn't find Canonicalizer for: " + getAlgorithm() +
@@ -113,30 +115,42 @@ public abstract class ApacheCanonicalizer extends TransformService {
 	    if (data instanceof ApacheData) {
 		XMLSignatureInput in = 
 		    ((ApacheData) data).getXMLSignatureInput();
-		if (in.isElement() || in.isNodeSet()) {
+		if (in.isElement()) {
+		    if (inclusiveNamespaces != null) {
+                        return new OctetStreamData(new ByteArrayInputStream
+                            (apacheCanonicalizer.canonicalizeSubtree
+                                (in.getSubNode(), inclusiveNamespaces)));
+                    } else {
+                        return new OctetStreamData(new ByteArrayInputStream
+                            (apacheCanonicalizer.canonicalizeSubtree
+                                (in.getSubNode())));
+                    }
+                } else if (in.isNodeSet()) {
                     nodeSet = in.getNodeSet();
 		} else {
 		    return new OctetStreamData(new ByteArrayInputStream(
 		        apacheCanonicalizer.canonicalize(
         		    Utils.readBytesFromStream(in.getOctetStream()))));
 		}
-	    } else if (data instanceof SubDocumentData) {
-	        SubDocumentData sdd = (SubDocumentData) data;
+	    } else if (data instanceof DOMSubTreeData) {
+	        DOMSubTreeData subTree = (DOMSubTreeData) data;
 	        if (inclusiveNamespaces != null) {
 	            return new OctetStreamData(new ByteArrayInputStream
 		        (apacheCanonicalizer.canonicalizeSubtree
-		         (sdd.nodeIterator().getRoot(), inclusiveNamespaces)));
+		         (subTree.getRoot(), inclusiveNamespaces)));
 	        } else {
 	            return new OctetStreamData(new ByteArrayInputStream
 		        (apacheCanonicalizer.canonicalizeSubtree
-		         (sdd.nodeIterator().getRoot())));
+		         (subTree.getRoot())));
 	        }
 	    } else if (data instanceof NodeSetData) {
 	        NodeSetData nsd = (NodeSetData) data;
 	        // convert Iterator to Set
 	        nodeSet = Utils.toNodeSet(nsd.iterator());
-	        log.log(Level.FINE, "Canonicalizing " + nodeSet.size() 
-		    + " nodes");
+		if (log.isLoggable(Level.FINE)) {
+	            log.log(Level.FINE, "Canonicalizing " + nodeSet.size() 
+		        + " nodes");
+		}
             } else {
 		return new OctetStreamData(new ByteArrayInputStream(
 		    apacheCanonicalizer.canonicalize(
@@ -174,8 +188,10 @@ public abstract class ApacheCanonicalizer extends TransformService {
                 apacheTransform = Transform.getInstance
                     (ownerDoc, getAlgorithm(), transformElem.getChildNodes());
                 apacheTransform.setElement(transformElem, xc.getBaseURI());
-                log.log(Level.FINE, "Created transform for algorithm: " 
-		    + getAlgorithm());            
+		if (log.isLoggable(Level.FINE)) {
+                    log.log(Level.FINE, "Created transform for algorithm: " 
+		        + getAlgorithm());            
+		}
 	    } catch (Exception ex) {
                 throw new TransformException
                     ("Couldn't find Transform for: " + getAlgorithm(), ex);
@@ -184,20 +200,27 @@ public abstract class ApacheCanonicalizer extends TransformService {
 
         XMLSignatureInput in;
         if (data instanceof ApacheData) {
-            log.log(Level.FINE, "ApacheData = true");
+	    if (log.isLoggable(Level.FINE)) {
+                log.log(Level.FINE, "ApacheData = true");
+	    }
             in = ((ApacheData) data).getXMLSignatureInput();
         } else if (data instanceof NodeSetData) {
-            log.log(Level.FINE, "isNodeSet() = true");
-            if (data instanceof SubDocumentData) {
-                SubDocumentData sdd = (SubDocumentData) data;
-                in = new XMLSignatureInput(sdd.nodeIterator().getRoot());
+	    if (log.isLoggable(Level.FINE)) {
+                log.log(Level.FINE, "isNodeSet() = true");
+	    }
+            if (data instanceof DOMSubTreeData) {
+                DOMSubTreeData subTree = (DOMSubTreeData) data;
+                in = new XMLSignatureInput(subTree.getRoot());
+		in.setExcludeComments(subTree.excludeComments());
             } else {
                 Set nodeSet =
                     Utils.toNodeSet(((NodeSetData) data).iterator());
                 in = new XMLSignatureInput(nodeSet);
             }
         } else {
-            log.log(Level.FINE, "isNodeSet() = false");
+	    if (log.isLoggable(Level.FINE)) {
+                log.log(Level.FINE, "isNodeSet() = false");
+	    }
             try {
                 in = new XMLSignatureInput
                     (((OctetStreamData)data).getOctetStream());

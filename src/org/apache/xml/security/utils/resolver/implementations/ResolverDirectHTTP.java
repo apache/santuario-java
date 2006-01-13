@@ -26,11 +26,11 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 
+import org.apache.xml.utils.URI;
 import org.apache.xml.security.signature.XMLSignatureInput;
 import org.apache.xml.security.utils.Base64;
 import org.apache.xml.security.utils.resolver.ResourceResolverException;
 import org.apache.xml.security.utils.resolver.ResourceResolverSpi;
-import org.apache.xml.utils.URI;
 import org.w3c.dom.Attr;
 
 
@@ -242,10 +242,9 @@ public class ResolverDirectHTTP extends ResourceResolverSpi {
     *
     * @param uri
     * @param BaseURI
-    *  @return 
+    *  @return true if can be resolved
     */
    public boolean engineCanResolve(Attr uri, String BaseURI) {
-
       if (uri == null) {
          log.debug("quick fail, uri == null");
 
@@ -254,37 +253,31 @@ public class ResolverDirectHTTP extends ResourceResolverSpi {
 
       String uriNodeValue = uri.getNodeValue();
 
-      if (uriNodeValue.equals("") || uriNodeValue.startsWith("#")) {
+      if (uriNodeValue.equals("") || (uriNodeValue.charAt(0)=='#')) {
          log.debug("quick fail for empty URIs and local ones");
 
          return false;
       }
 
-      URI uriNew = null;
+      if (log.isDebugEnabled())
+      	log.debug("I was asked whether I can resolve " + uriNodeValue);
 
-      try {
-         uriNew = getNewURI(uri.getNodeValue(), BaseURI);
-      } catch (URI.MalformedURIException ex) {
-         log.debug("", ex);
-      }
-
-      if ((uriNew != null) && uriNew.getScheme().equals("http")) {
+      if ( uriNodeValue.startsWith("http:") ||
+				 BaseURI.startsWith("http:")) {
          if (log.isDebugEnabled())
-        	log.debug("I state that I can resolve " + uriNew.toString());
+         	log.debug("I state that I can resolve " + uriNodeValue);
 
          return true;
       }
 
       if (log.isDebugEnabled())
-      	log.debug("I state that I can't resolve " + uriNew.toString());
+      	log.debug("I state that I can't resolve " + uriNodeValue);
 
       return false;
    }
 
    /**
-    * Method engineGetPropertyKeys
-    *
-    * @return 
+    * @inheritDoc 
     */
    public String[] engineGetPropertyKeys() {
       return ResolverDirectHTTP.properties;

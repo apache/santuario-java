@@ -41,9 +41,7 @@ import java.security.Key;
 import java.util.Collections;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.w3c.dom.Document;
@@ -62,8 +60,7 @@ import org.apache.xml.security.utils.Base64;
 public final class DOMXMLSignature extends DOMStructure 
     implements XMLSignature {
 
-    static Logger log = Logger.getLogger(DOMXMLSignature.class.getName());
-    
+    private static Logger log = Logger.getLogger("org.jcp.xml.dsig.internal.dom");
     private String id;
     private SignatureValue sv;
     private KeyInfo ki;
@@ -107,7 +104,7 @@ public final class DOMXMLSignature extends DOMStructure
             this.objects = Collections.EMPTY_LIST;
         } else {
             List objsCopy = new ArrayList(objs);
-            for (int i = 0; i < objsCopy.size(); i++) {
+            for (int i = 0, size = objsCopy.size(); i < size; i++) {
                 if (!(objsCopy.get(i) instanceof XMLObject)) {
                     throw new ClassCastException
                         ("objs["+i+"] is not an XMLObject");
@@ -134,7 +131,7 @@ public final class DOMXMLSignature extends DOMStructure
 
 	// unmarshal SignedInfo
 	Element siElem = DOMUtils.getFirstChildElement(localSigElem);
-	si = new DOMSignedInfo(siElem, this, context);
+	si = new DOMSignedInfo(siElem, context);
 
 	// unmarshal SignatureValue 
 	Element sigValElem = DOMUtils.getNextSiblingElement(siElem);
@@ -209,7 +206,7 @@ public final class DOMXMLSignature extends DOMStructure
         }
 
 	// create and append SignedInfo element
-	((DOMSignedInfo) si).marshal(sigElem, dsPrefix, context, this);
+	((DOMSignedInfo) si).marshal(sigElem, dsPrefix, context);
 
         // create and append SignatureValue element
 	((DOMSignatureValue) sv).marshal(sigElem, dsPrefix, context);
@@ -220,9 +217,8 @@ public final class DOMXMLSignature extends DOMStructure
 	}
 
 	// create and append Object elements if necessary
-	Iterator i = objects.iterator();
-	while (i.hasNext()) {
-	    ((DOMXMLObject) i.next()).marshal(sigElem, dsPrefix, context);
+	for (int i = 0, size = objects.size(); i < size; i++) {
+	    ((DOMXMLObject) objects.get(i)).marshal(sigElem, dsPrefix, context);
 	}
 
 	// append Id attribute
@@ -243,17 +239,21 @@ public final class DOMXMLSignature extends DOMStructure
 	}
 
         // validate all References
-        Iterator refs = this.si.getReferences().iterator();
+        List refs = this.si.getReferences();
         boolean validateRefs = true;
-        for (int counter = 0; validateRefs && refs.hasNext(); counter++) {
-            Reference ref = (Reference) refs.next();
+        for (int i = 0, size = refs.size(); validateRefs && i < size; i++) {
+            Reference ref = (Reference) refs.get(i);
             boolean refValid = ref.validate(vc);
-            log.log(Level.FINE, "Reference[" + ref.getURI() + "] is valid: " 
-		+ refValid);
+	    if (log.isLoggable(Level.FINE)) {
+                log.log(Level.FINE, "Reference[" + ref.getURI() + "] is valid: "
+		    + refValid);
+	    }
             validateRefs &= refValid;
         }
         if (!validateRefs) {
-            log.log(Level.FINE, "Couldn't validate the References");
+	    if (log.isLoggable(Level.FINE)) {
+                log.log(Level.FINE, "Couldn't validate the References");
+	    }
 	    validationStatus = false;
 	    validated = true;
 	    return validationStatus;
@@ -272,21 +272,26 @@ public final class DOMXMLSignature extends DOMStructure
 	if (Boolean.TRUE.equals(vc.getProperty
 	    ("org.jcp.xml.dsig.validateManifests"))) {
 
-            Iterator oi = objects.iterator();
-            while (validateMans && oi.hasNext()) {
-                XMLObject xo = (XMLObject) oi.next();
-                Iterator ci = xo.getContent().iterator();
-                while (validateMans && ci.hasNext()) {
-                    XMLStructure xs = (XMLStructure) ci.next();
+	    for (int i=0, size=objects.size(); validateMans && i < size; i++) {
+                XMLObject xo = (XMLObject) objects.get(i);
+                List content = xo.getContent();
+		int csize = content.size();
+                for (int j = 0; validateMans && j < csize; j++) {
+                    XMLStructure xs = (XMLStructure) content.get(j);
                     if (xs instanceof Manifest) {
-                        log.log(Level.FINE, "validating manifest");
+	    		if (log.isLoggable(Level.FINE)) {
+                            log.log(Level.FINE, "validating manifest");
+			}
                         Manifest man = (Manifest) xs;
-                        Iterator ri = man.getReferences().iterator();
-                        for (int j=0; validateMans && ri.hasNext(); j++) {
-                            Reference ref = (Reference) ri.next();
+                        List manRefs = man.getReferences();
+			int rsize = manRefs.size();
+                        for (int k = 0; validateMans && k < rsize; k++) {
+                            Reference ref = (Reference) manRefs.get(k);
                             boolean refValid = ref.validate(vc);
-                            log.log(Level.FINE, "Manifest ref[" + ref.getURI() 
-				+ "] is valid: " + refValid);
+	    		    if (log.isLoggable(Level.FINE)) {
+                                log.log(Level.FINE, "Manifest ref[" 
+				    + ref.getURI() + "] is valid: " + refValid);
+			    }
 			    validateMans &= refValid;
 			}
                     }
@@ -318,24 +323,23 @@ public final class DOMXMLSignature extends DOMStructure
 	signatureIdMap = new HashMap();
 	signatureIdMap.put(id, this);
 	signatureIdMap.put(si.getId(), si);
-	Iterator iter = si.getReferences().iterator();
-	while (iter.hasNext()) {
-            Reference ref = (Reference) iter.next();
+	List refs = si.getReferences();
+	for (int i = 0, size = refs.size(); i < size; i++) {
+            Reference ref = (Reference) refs.get(i);
             signatureIdMap.put(ref.getId(), ref);
 	}
-        iter = objects.iterator();
-	while (iter.hasNext()) {
-            XMLObject obj = (XMLObject) iter.next();
+	for (int i = 0, size = objects.size(); i < size; i++) {
+            XMLObject obj = (XMLObject) objects.get(i);
             signatureIdMap.put(obj.getId(), obj);
-            Iterator contIter = obj.getContent().iterator();
-            while (contIter.hasNext()) {
-		XMLStructure xs = (XMLStructure) contIter.next();
+            List content = obj.getContent();
+	    for (int j = 0, csize = content.size(); j < csize; j++) {
+		XMLStructure xs = (XMLStructure) content.get(j);
 		if (xs instanceof Manifest) {
                     Manifest man = (Manifest) xs;
                     signatureIdMap.put(man.getId(), man);
-                    Iterator manIter = man.getReferences().iterator();
-                    while (manIter.hasNext()) {
-			Reference ref = (Reference) manIter.next();
+                    List manRefs = man.getReferences();
+		    for (int k = 0, msize = manRefs.size(); k < msize; k++) {
+			Reference ref = (Reference) manRefs.get(k);
 			allReferences.add(ref);
 			signatureIdMap.put(ref.getId(), ref);
                     }
@@ -344,16 +348,14 @@ public final class DOMXMLSignature extends DOMStructure
 	}
 
         // generate/digest each reference
-	iter = allReferences.iterator();
-	while (iter.hasNext()) {
-            DOMReference ref = (DOMReference) iter.next();
+	for (int i = 0, size = allReferences.size(); i < size; i++) {
+            DOMReference ref = (DOMReference) allReferences.get(i);
             digestReference(ref, signContext);
 	}
 
         // do final sweep to digest any references that were skipped or missed
-	iter = allReferences.iterator();
-	while (iter.hasNext()) {
-            DOMReference ref = (DOMReference) iter.next();
+	for (int i = 0, size = allReferences.size(); i < size; i++) {
+            DOMReference ref = (DOMReference) allReferences.get(i);
             if (ref.isDigested()) {
 		continue;
             }
@@ -376,17 +378,17 @@ public final class DOMXMLSignature extends DOMStructure
 	}
 
 	// calculate signature value
-	byte[] signedInfoBytes = ((DOMSignedInfo) si).canonicalize(signContext);
-
 	byte[] val = null;
 	try {
             val = ((DOMSignatureMethod) si.getSignatureMethod()).sign
-		(signingKey, signedInfoBytes);
+		(signingKey, (DOMSignedInfo) si, signContext);
 	} catch (InvalidKeyException ike) {
             throw new XMLSignatureException(ike);
 	}
 
-        log.log(Level.FINE, "SignatureValue = " + val);        
+	if (log.isLoggable(Level.FINE)) {
+            log.log(Level.FINE, "SignatureValue = " + val);        
+	}
 	((DOMSignatureValue) sv).setValue(val);
 
         this.localSigElem = sigElem;   
@@ -430,10 +432,10 @@ public final class DOMXMLSignature extends DOMStructure
                     digestReference((DOMReference) obj, signContext);
 		} else if (obj instanceof Manifest) {
                     Manifest man = (Manifest) obj;
-                    Iterator iter = man.getReferences().iterator();
-                    while (iter.hasNext()) {
+                    List manRefs = man.getReferences();
+		    for (int i = 0, size = manRefs.size(); i < size; i++) {
 			digestReference
-                 	    ((DOMReference) iter.next(), signContext);
+                 	    ((DOMReference) manRefs.get(i), signContext);
 		    }
 		}
             }
@@ -441,11 +443,12 @@ public final class DOMXMLSignature extends DOMStructure
 	    // reference dependencies in the XPath Transform - so be on
 	    // the safe side, and skip and do at end in the final sweep
 	    if (uri.length() == 0) {
-		Iterator iter = ref.getTransforms().iterator();
-		while (iter.hasNext()) {
-		    Transform transform = (Transform) iter.next();
-		    if (transform.getAlgorithm().equals(Transform.XPATH) ||
-			transform.getAlgorithm().equals(Transform.XPATH2)) {
+		List transforms = ref.getTransforms();
+		for (int i = 0, size = transforms.size(); i < size; i++) {
+		    Transform transform = (Transform) transforms.get(i);
+		    String transformAlg = transform.getAlgorithm();
+		    if (transformAlg.equals(Transform.XPATH) ||
+			transformAlg.equals(Transform.XPATH2)) {
                 	return;
                     }
             	}
@@ -469,16 +472,6 @@ public final class DOMXMLSignature extends DOMStructure
 	}
 
 	DOMSignatureValue(Element sigValueElem) throws MarshalException {
-	    String signatureValue = sigValueElem.getFirstChild().getNodeValue();
-            // strip ignoreable whitespace from signature value
-            StringTokenizer tokenizer = new StringTokenizer
-	        (signatureValue, " \n\r\t", false);
-            StringBuffer svBuf = new StringBuffer(signatureValue.length());
-            while (tokenizer.hasMoreElements()) {
-                svBuf.append(tokenizer.nextToken());
-            }
-	    valueBase64 = svBuf.toString();
-
 	    try {
 	        // base64 decode signatureValue
 	        value = Base64.decode(sigValueElem);
@@ -526,14 +519,10 @@ public final class DOMXMLSignature extends DOMStructure
 		    "key", kse);
 	    }
 
-	    // canonicalize SignedInfo
-	    byte[] siBytes = 
-		((DOMSignedInfo) si).canonicalize(validateContext);
-
-	    // verify signature
+	    // canonicalize SignedInfo and verify signature
 	    try {
 		validationStatus = ((DOMSignatureMethod) sm).verify
-		    (validationKey, siBytes, value);
+		    (validationKey, (DOMSignedInfo) si, value, validateContext);
 	    } catch (Exception e) {
 		throw new XMLSignatureException(e);
 	    }

@@ -63,7 +63,7 @@ public final class DOMManifest extends DOMStructure implements Manifest {
 	    throw new IllegalArgumentException("list of references must " +
 	        "contain at least one entry");
 	}
-        for (int i = 0; i < refCopy.size(); i++) {
+        for (int i = 0, size = refCopy.size(); i < size; i++) {
             if (!(refCopy.get(i) instanceof Reference)) {
                 throw new ClassCastException
                     ("references["+i+"] is not a valid type");
@@ -108,9 +108,8 @@ public final class DOMManifest extends DOMStructure implements Manifest {
         DOMUtils.setAttributeID(manElem, "Id", id);
 
 	// add references
-	Iterator i = references.iterator();
-	while (i.hasNext()) {
-	    DOMReference ref = (DOMReference) i.next();
+	for (int i = 0, size = references.size(); i < size; i++) {
+	    DOMReference ref = (DOMReference) references.get(i);
 	    ref.marshal(manElem, dsPrefix, context);
 	}
         parent.appendChild(manElem);

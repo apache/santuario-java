@@ -127,7 +127,6 @@ public final class DOMKeyInfo extends DOMStructure implements KeyInfo {
             throw new NullPointerException("parent is null");
         }
 
-        DOMStructure dp = (DOMStructure) parent;
         marshal(((javax.xml.crypto.dom.DOMStructure) parent).getNode(),
             DOMUtils.getSignaturePrefix(context), (DOMCryptoContext) context);
     }

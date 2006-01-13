@@ -21,8 +21,6 @@ package org.apache.xml.security.utils;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -47,10 +45,6 @@ import org.w3c.dom.Text;
  */
 public class XMLUtils {
 
-   /** {@link org.apache.commons.logging} logging facility */
-    static org.apache.commons.logging.Log log = 
-        org.apache.commons.logging.LogFactory.getLog(XMLUtils.class.getName());
-
    /**
     * Constructor XMLUtils
     *
@@ -59,7 +53,13 @@ public class XMLUtils {
 
       // we don't allow instantiation
    }
-
+   public static Element getNextElement(Node el) {
+	   while ((el!=null) && (el.getNodeType()!=Node.ELEMENT_NODE)) {
+		   el=el.getNextSibling();
+	   }
+	   return (Element)el;
+	   
+   }
    
    /**
     * @param rootNode
@@ -114,276 +114,6 @@ public class XMLUtils {
    	   			result.add(rootNode);
    	   }
    	   return;
-   }
-   /**
-    * Method getXalanVersion
-    *
-    * @return 
-    */
-   public static String getXalanVersion() {
-
-      String version = XMLUtils.getXalan1Version();
-
-      if (version != null) {
-         return version;
-      }
-
-      version = XMLUtils.getXalan20Version();
-
-      if (version != null) {
-         return version;
-      }
-
-      version = XMLUtils.getXalan2Version();
-
-      if (version != null) {
-         return version;
-      }
-
-      return "Apache Xalan not installed";
-
-      // return "Apache " + org.apache.xalan.processor.XSLProcessorVersion.S_VERSION;
-      // return "Apache " + org.apache.xalan.Version.getVersion();
-   }
-
-   /**
-    * Method getXercesVersion
-    *
-    * @return
-    */
-   public static String getXercesVersion() {
-
-      String version = XMLUtils.getXerces1Version();
-
-      if (version != null) {
-         return version;
-      }
-
-      version = XMLUtils.getXerces2Version();
-
-      if (version != null) {
-         return version;
-      }
-
-      return "Apache Xerces not installed";
-
-      // return "Apache " + org.apache.xerces.impl.Version.fVersion;
-      // return "Apache " + org.apache.xerces.framework.Version.fVersion;
-   }
-
-   /**
-    * Method getXalan1Version
-    *
-    * @return
-    */
-   private static String getXalan1Version() {
-
-      try {
-         final String XALAN1_VERSION_CLASS =
-            "org.apache.xalan.xslt.XSLProcessorVersion";
-         Class clazz = classForName(XALAN1_VERSION_CLASS);
-
-         // Found Xalan-J 1.x, grab it's version fields
-         StringBuffer buf = new StringBuffer();
-         Field f = clazz.getField("PRODUCT");
-
-         buf.append(f.get(null));
-         buf.append(';');
-
-         f = clazz.getField("LANGUAGE");
-
-         buf.append(f.get(null));
-         buf.append(';');
-
-         f = clazz.getField("S_VERSION");
-
-         buf.append(f.get(null));
-         buf.append(';');
-
-         return buf.toString();
-      } catch (Exception e1) {
-         return null;
-      }
-   }
-
-   /**
-    * Method getXalan20Version
-    *
-    * @return
-    */
-   private static String getXalan20Version() {
-
-      try {
-
-         // NOTE: This is the new Xalan 2.2+ version class
-         final String XALAN2_2_VERSION_CLASS = "org.apache.xalan.Version";
-         final String XALAN2_2_VERSION_METHOD = "getVersion";
-         final Class noArgs[] = new Class[0];
-         Class clazz = classForName(XALAN2_2_VERSION_CLASS);
-         Method method = clazz.getMethod(XALAN2_2_VERSION_METHOD, noArgs);
-         Object returnValue = method.invoke(null, new Object[0]);
-
-         return (String) returnValue;
-      } catch (Exception e2) {
-         return null;
-      }
-   }
-
-   /**
-    * Method getXalan2Version
-    *
-    * @return
-    */
-   private static String getXalan2Version() {
-
-      try {
-
-         // NOTE: This is the old Xalan 2.0, 2.1, 2.2 version class,
-         //    is being replaced by class below
-         final String XALAN2_VERSION_CLASS =
-            "org.apache.xalan.processor.XSLProcessorVersion";
-         Class clazz = classForName(XALAN2_VERSION_CLASS);
-
-         // Found Xalan-J 2.x, grab it's version fields
-         StringBuffer buf = new StringBuffer();
-         Field f = clazz.getField("S_VERSION");
-
-         buf.append(f.get(null));
-
-         return buf.toString();
-      } catch (Exception e2) {
-         return null;
-      }
-   }
-
-   /**
-    * Method getXerces1Version
-    *
-    * @return
-    */
-   private static String getXerces1Version() {
-
-      try {
-         final String XERCES1_VERSION_CLASS =
-            "org.apache.xerces.framework.Version";
-         Class clazz = classForName(XERCES1_VERSION_CLASS);
-
-         // Found Xerces-J 1.x, grab it's version fields
-         Field f = clazz.getField("fVersion");
-         String parserVersion = (String) f.get(null);
-
-         return parserVersion;
-      } catch (Exception e) {
-         return null;
-      }
-   }
-
-   /**
-    * Method getXerces2Version
-    *
-    * @return
-    */
-   private static String getXerces2Version() {
-
-      try {
-         final String XERCES2_VERSION_CLASS = "org.apache.xerces.impl.Version";
-         Class clazz = classForName(XERCES2_VERSION_CLASS);
-
-         // Found Xerces-J 2.x, grab it's version fields
-         Field f = clazz.getField("fVersion");
-         String parserVersion = (String) f.get(null);
-
-         return parserVersion;
-      } catch (Exception e) {
-         return null;
-      }
-   }
-
-   /**
-    * Worker method to load a class.
-    * Factor out loading classes for future use and JDK differences.
-    * Copied from javax.xml.*.FactoryFinder
-    * @param className name of class to load from
-    * an appropriate classLoader
-    * @return the class asked for
-    * @throws ClassNotFoundException
-    */
-   public static Class classForName(String className)
-           throws ClassNotFoundException {
-
-      ClassLoader classLoader = findClassLoader();
-
-      if (classLoader == null) {
-         return Class.forName(className);
-      } 
-       return classLoader.loadClass(className);      
-   }
-
-   /**
-    * Worker method to figure out which ClassLoader to use.
-    * For JDK 1.2 and later use the context ClassLoader.
-    * Copied from javax.xml.*.FactoryFinder
-    * @return the appropriate ClassLoader
-    */
-   protected static ClassLoader findClassLoader() {
-
-      Method m = null;
-
-      try {
-         m = Thread.class.getMethod("getContextClassLoader", new Class[]{});
-      } catch (NoSuchMethodException e) {
-
-         // Assume that we are running JDK 1.1, use the current ClassLoader
-         return XMLUtils.class.getClassLoader();
-      }
-
-      try {
-         return (ClassLoader) m.invoke(Thread.currentThread(), new Object[]{});
-      } catch (Exception e) {
-         throw new RuntimeException(e.toString());
-      }
-   }
-
-   
-   /**
-    * Method spitOutVersions
-    *
-    * @param log
-    */
-   public static void spitOutVersions(org.apache.commons.logging.Log log) {
-   	  if (log.isDebugEnabled()) {
-   	  	log.debug(XMLUtils.getXercesVersion());   	  	
-        log.debug(XMLUtils.getXalanVersion());
-      }
-   }
-
-   /** Field nodeTypeString */
-   private static String[] nodeTypeString = new String[]{ "", "ELEMENT",
-                                                          "ATTRIBUTE",
-                                                          "TEXT_NODE",
-                                                          "CDATA_SECTION",
-                                                          "ENTITY_REFERENCE",
-                                                          "ENTITY",
-                                                          "PROCESSING_INSTRUCTION",
-                                                          "COMMENT", "DOCUMENT",
-                                                          "DOCUMENT_TYPE",
-                                                          "DOCUMENT_FRAGMENT",
-                                                          "NOTATION" };
-
-   /**
-    * Transforms <code>org.w3c.dom.Node.XXX_NODE</code> NodeType values into
-    * Strings.
-    *
-    * @param nodeType as taken from the {@link org.w3c.dom.Node#getNodeType} function
-    * @return the String value.
-    * @see org.w3c.dom.Node#getNodeType
-    */
-   public static String getNodeTypeString(short nodeType) {
-
-      if ((nodeType > 0) && (nodeType < 13)) {
-         return nodeTypeString[nodeType];
-      }
-         return "";    
    }
 
 
@@ -464,7 +194,7 @@ public class XMLUtils {
     * Method getFullTextChildrenFromElement
     *
     * @param element
-    * @return
+    * @return the string of chi;ds
     */
    public static String getFullTextChildrenFromElement(Element element) {
 
@@ -510,9 +240,8 @@ public class XMLUtils {
          return element;
       } 
          Element element = doc.createElementNS(Constants.SignatureSpecNS,
-                                               ds + ":" + elementName);
-
-         element.setAttributeNS(Constants.NamespaceSpecNS, "xmlns:" + ds,
+                                               ds + ":" + elementName);         
+         element.setAttributeNS(Constants.NamespaceSpecNS, ElementProxy.getDefaultPrefixBindings(Constants.SignatureSpecNS),
                                 Constants.SignatureSpecNS);
 
          return element;
@@ -532,7 +261,7 @@ public class XMLUtils {
            String localName) {
 
       if ((element == null) ||
-          !Constants.SignatureSpecNS.equals(element.getNamespaceURI()) ){
+          Constants.SignatureSpecNS!=element.getNamespaceURI() ){
          return false;
       }
 
@@ -555,7 +284,7 @@ public class XMLUtils {
            String localName) {
 
       if ((element == null) || 
-            !EncryptionConstants.EncryptionSpecNS.equals(element.getNamespaceURI()) 
+            EncryptionConstants.EncryptionSpecNS!=element.getNamespaceURI() 
           ){
          return false;
       }
@@ -632,7 +361,7 @@ public class XMLUtils {
     * @param doc
     * @param prefix
     * @param namespace
-    * @return
+    * @return the element.
     */
    public static Element createDSctx(Document doc, String prefix,
                                      String namespace) {
@@ -667,7 +396,7 @@ public class XMLUtils {
     * Method convertNodelistToSet
     *
     * @param xpathNodeSet
-    * @return
+    * @return the set with the nodelist
     */
    public static Set convertNodelistToSet(NodeList xpathNodeSet) {
 
@@ -709,7 +438,7 @@ public class XMLUtils {
          documentElement.setAttributeNS(Constants.NamespaceSpecNS, "xmlns", "");
       }
 
-      XMLUtils.circumventBug2650recurse(doc);
+      XMLUtils.circumventBug2650internal(doc);
    }
 
    /**
@@ -718,61 +447,73 @@ public class XMLUtils {
     * @param node
     * @see <A HREF="http://nagoya.apache.org/bugzilla/show_bug.cgi?id=2650">Namespace axis resolution is not XPath compliant </A>
     */
-   private static void circumventBug2650recurse(Node node) {
-
-      if (node.getNodeType() == Node.ELEMENT_NODE) {
-         Element element = (Element) node;
-         if (element.hasChildNodes() && element.hasAttributes()) {
-         	NamedNodeMap attributes = element.getAttributes();
-         	int attributesLength = attributes.getLength();         
-
-         	for (Node child = element.getFirstChild(); child!=null; 
-                 child=child.getNextSibling()) {            
-
-         		if (child.getNodeType() == Node.ELEMENT_NODE) {
-         			Element childElement = (Element) child;
-
-         			for (int i = 0; i < attributesLength; i++) {
-         				Attr currentAttr = (Attr) attributes.item(i);                  
-         				if (Constants.NamespaceSpecNS.equals(
-         						currentAttr.getNamespaceURI())) {                     
-                        
-         					if (!childElement.hasAttributeNS(
-         							Constants.NamespaceSpecNS,
-									currentAttr.getLocalName())) {
-         						childElement.setAttributeNS(Constants.NamespaceSpecNS,
-                                                    currentAttr.getName(),
-                                                    currentAttr.getNodeValue());
-         					}
-         				}
-         			}
-         		}
-            }
-         }  
-      }
-
-      for (Node child = node.getFirstChild(); child != null;
-              child = child.getNextSibling()) {
-         switch (child.getNodeType()) {
-
+   private static void circumventBug2650internal(Node node) {
+	   Node parent=null;
+	   Node sibling=null;
+	   final String namespaceNs=Constants.NamespaceSpecNS;
+	   do {
+         switch (node.getNodeType()) {
          case Node.ELEMENT_NODE :
+        	 Element element = (Element) node;
+             if (!element.hasChildNodes())
+            	 break;
+             if (element.hasAttributes()) {            	 
+             NamedNodeMap attributes = element.getAttributes();         	
+             int attributesLength = attributes.getLength();    
+             
+             for (Node child = element.getFirstChild(); child!=null; 
+             	child=child.getNextSibling()) {            
+
+             	if (child.getNodeType() != Node.ELEMENT_NODE) {
+             		continue;
+             	}
+             	Element childElement = (Element) child;
+
+             	for (int i = 0; i < attributesLength; i++) {
+             		Attr currentAttr = (Attr) attributes.item(i); 
+             		if (namespaceNs!=currentAttr.getNamespaceURI())
+             			continue;
+             		if (childElement.hasAttributeNS(namespaceNs,
+    							currentAttr.getLocalName())) {
+             				continue;
+             		}
+             		childElement.setAttributeNS(namespaceNs,
+                                                currentAttr.getName(),
+                                                currentAttr.getNodeValue());         					
+             				
+             			
+             	}
+             }            
+             }
          case Node.ENTITY_REFERENCE_NODE :
          case Node.DOCUMENT_NODE :
-            circumventBug2650recurse(child);
+        	 parent=node;
+        	 sibling=node.getFirstChild();
+             break;
          }
-      }
+         while ((sibling==null) && (parent!=null)) {
+        		 sibling=parent.getNextSibling();
+        		 parent=parent.getParentNode();
+        	 };
+       if (sibling==null) {
+        		 return;
+        	 }
+       	
+         node=sibling;
+         sibling=node.getNextSibling();
+	   } while (true);
    }
 
    /**
     * @param sibling
     * @param nodeName
     * @param number
-    * @return
+    * @return nodes with the constrain
     */
    public static Element selectDsNode(Node sibling, String nodeName, int number) {
 	while (sibling!=null) {
 		if (nodeName.equals(sibling.getLocalName())
-				&& Constants.SignatureSpecNS.equals(sibling.getNamespaceURI())) {
+				&& Constants.SignatureSpecNS==sibling.getNamespaceURI()) {
 			if (number==0){
 				return (Element)sibling;
 			}
@@ -787,13 +528,13 @@ public class XMLUtils {
     * @param sibling
     * @param nodeName
     * @param number
-    * @return
+    * @return nodes with the constrain
     */
 
    public static Element selectXencNode(Node sibling, String nodeName, int number) {
 	while (sibling!=null) {
 		if (nodeName.equals(sibling.getLocalName())
-				&& EncryptionConstants.EncryptionSpecNS.equals(sibling.getNamespaceURI())) {
+				&& EncryptionConstants.EncryptionSpecNS==sibling.getNamespaceURI()) {
 			if (number==0){
 				return (Element)sibling;
 			}
@@ -809,7 +550,7 @@ public class XMLUtils {
     * @param sibling
     * @param nodeName
     * @param number
-    * @return
+    * @return nodes with the constrain
     */
    public static Text selectDsNodeText(Node sibling, String nodeName, int number) {
    	    Node n=selectDsNode(sibling,nodeName,number);
@@ -828,7 +569,7 @@ public class XMLUtils {
     * @param uri
     * @param nodeName
     * @param number
-    * @return
+    * @return nodes with the constrain
     */
    public static Text selectNodeText(Node sibling, String uri, String nodeName, int number) {
         Node n=selectNode(sibling,uri,nodeName,number);
@@ -847,12 +588,12 @@ public class XMLUtils {
     * @param uri
     * @param nodeName
     * @param number
-    * @return
+    * @return nodes with the constrain
     */
    public static Element selectNode(Node sibling, String uri,String nodeName, int number) {
 	while (sibling!=null) {
 		if (nodeName.equals(sibling.getLocalName())
-				&& uri.equals(sibling.getNamespaceURI())) {
+				&& uri==sibling.getNamespaceURI()) {
 			if (number==0){
 				return (Element)sibling;
 			}
@@ -866,17 +607,50 @@ public class XMLUtils {
    /**
     * @param sibling
     * @param nodeName    
-    * @return
+    * @return nodes with the constrain
     */
    public static Element[] selectDsNodes(Node sibling,String nodeName) {
-     return selectNodes(sibling,Constants.SignatureSpecNS,nodeName);
+     return selectConsecutiveNodes(sibling,Constants.SignatureSpecNS,nodeName);
    }
-   
    /**
     * @param sibling
     * @param uri
     * @param nodeName
-    * @return
+    * @return nodes with the constrain
+    */
+    public static Element[] selectConsecutiveNodes(Node sibling,String uri,String nodeName) {
+    	int size=20;
+    	Element[] a= new Element[size];
+    	int curr=0;
+    	//List list=new ArrayList();
+    	while (sibling!=null) {
+    		if (nodeName.equals(sibling.getLocalName())
+    				&& uri==sibling.getNamespaceURI()) {
+    			do {
+    				a[curr++]=(Element)sibling;
+    				if (size<=curr) {
+    					int cursize= size<<2;
+    					Element []cp=new Element[cursize];
+    					System.arraycopy(a,0,cp,0,size);
+    					a=cp;
+    					size=cursize;
+    				}
+    				sibling=sibling.getNextSibling();
+    			} while ((sibling!=null) && nodeName.equals(sibling.getLocalName())
+				&& uri==sibling.getNamespaceURI());    			
+    			break;
+    		}
+    		sibling=sibling.getNextSibling();
+    	}
+    	Element []af=new Element[curr];
+    	System.arraycopy(a,0,af,0,curr);
+    	return af;
+   }
+   /**
+    * @param sibling
+    * @param uri
+    * @param nodeName
+    * @return nodes with the constrain
     */
     public static Element[] selectNodes(Node sibling,String uri,String nodeName) {
     	int size=20;
@@ -885,7 +659,7 @@ public class XMLUtils {
     	//List list=new ArrayList();
     	while (sibling!=null) {
     		if (nodeName.equals(sibling.getLocalName())
-    				&& uri.equals(sibling.getNamespaceURI())) {
+    				&& uri==sibling.getNamespaceURI()) {
     			a[curr++]=(Element)sibling;
     			if (size<=curr) {
     				int cursize= size<<2;
@@ -905,7 +679,7 @@ public class XMLUtils {
    /**
     * @param signatureElement
     * @param inputSet
-    * @return
+    * @return nodes with the constrain
     */
     public static Set excludeNodeFromSet(Node signatureElement, Set inputSet) {
 	  Set resultSet = new HashSet();
@@ -928,9 +702,9 @@ public class XMLUtils {
     *
     * @param ctx
     * @param descendantOrSelf
-    * @return
+    * @return true if the node is descendant
     */
-   static boolean isDescendantOrSelf(Node ctx, Node descendantOrSelf) {
+   static public boolean isDescendantOrSelf(Node ctx, Node descendantOrSelf) {
 
       if (ctx == descendantOrSelf) {
          return true;

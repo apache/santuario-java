@@ -30,10 +30,7 @@ import javax.xml.crypto.dsig.spec.*;
 
 import java.security.*;
 import java.security.spec.AlgorithmParameterSpec;
-import java.util.Iterator;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -44,8 +41,6 @@ import org.w3c.dom.Node;
  * @author Sean Mullan
  */
 public final class DOMXMLSignatureFactory extends XMLSignatureFactory {
-
-    static Logger log = Logger.getLogger(DOMXMLSignatureFactory.class.getName());
 
     static {
         AccessController.doPrivileged(new PrivilegedAction() {
@@ -178,7 +173,6 @@ public final class DOMXMLSignatureFactory extends XMLSignatureFactory {
 	    throw new MarshalException("Document implementation must " +
 		"support DOM Level 2 and be namespace aware");
 	}
-        log.log(Level.FINE, "unmarshalling element: " + tag );
         if (tag.equals("Signature")) {
             return new DOMXMLSignature(element, context);
         } else {
