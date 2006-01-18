@@ -582,6 +582,34 @@
 		</java>
 	</target>
 
+	<!-- JSR 105 Samples -->
+	<target name="jsr105-samples" 
+		depends="build.samples">
+	    <echo message="Generating a detached signature"/>
+	    <java classname="javax.xml.crypto.dsig.samples.GenDetached"
+	          fork="yes">
+	        <classpath refid="id.classpath.samples"/>
+	        <sysproperty key="proxyHost" value="${proxy.host}"/>
+	        <sysproperty key="proxyPort" value="${proxy.port}"/>
+	    </java>
+	    <echo message="Generating an enveloped signature"/>
+	    <java classname="javax.xml.crypto.dsig.samples.GenEnveloped"
+	          fork="yes">
+		<arg value="${dir.src.samples}/javax/xml/crypto/dsig/samples/envelope.xml"/>
+	        <classpath refid="id.classpath.samples"/>
+	    </java>
+	    <echo message="Generating an enveloping signature"/>
+	    <java classname="javax.xml.crypto.dsig.samples.GenEnveloping"
+	          fork="yes">
+	        <classpath refid="id.classpath.samples"/>
+	    </java>
+	    <echo message="Validating a signature"/>
+	    <java classname="javax.xml.crypto.dsig.samples.Validate"
+	          fork="yes">
+		<arg value="${dir.src.samples}/javax/xml/crypto/dsig/samples/envelopedSignature.xml"/>
+	        <classpath refid="id.classpath.samples"/>
+	    </java>
+	</target>
 	
 	<!-- D I S T R I B U T I O N  T A R G E T S -->
     <!-- distribution targets -->
