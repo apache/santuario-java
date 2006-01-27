@@ -14,6 +14,9 @@
  *  limitations under the License.
  *
  */
+/*
+ * Copyright 2005 Sun Microsystems, Inc. All rights reserved.
+ */
 package javax.xml.crypto.test.dsig;
 
 import javax.xml.crypto.dsig.*;
@@ -73,6 +76,8 @@ import junit.framework.*;
  *     </DSAKeyValue>
  *   </KeyInfo>
  * </Signature>
+ *
+ * @author Sean Mullan
  */
 public class DetachedTest extends TestCase {
 

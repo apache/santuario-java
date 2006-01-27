@@ -14,6 +14,9 @@
  *  limitations under the License.
  *
  */
+/*
+ * Copyright 2005 Sun Microsystems, Inc. All rights reserved.
+ */
 package javax.xml.crypto.test.dsig;
 
 import java.io.File;
@@ -29,6 +32,8 @@ import javax.xml.crypto.test.KeySelectors;
 /**
  * This is a testcase to validate all "merlin-xmldsig-twenty-three" 
  * testcases from Baltimore
+ *
+ * @author Sean Mullan
  */
 public class Baltimore23Test extends TestCase {
 

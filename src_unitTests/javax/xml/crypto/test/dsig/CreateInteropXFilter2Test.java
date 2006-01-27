@@ -14,6 +14,9 @@
  *  limitations under the License.
  *
  */
+/*
+ * Copyright 2005 Sun Microsystems, Inc. All rights reserved.
+ */
 package javax.xml.crypto.test.dsig;
 
 import java.io.*;
@@ -37,6 +40,8 @@ import javax.xml.crypto.test.KeySelectors;
 /**
  * Test that recreates merlin-xpath-filter2-three test vectors
  * but with different keys and X.509 data.
+ *
+ * @author Sean Mullan
  */
 public class CreateInteropXFilter2Test extends TestCase {
 

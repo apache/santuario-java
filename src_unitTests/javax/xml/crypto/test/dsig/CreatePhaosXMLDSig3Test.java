@@ -14,6 +14,9 @@
  *  limitations under the License.
  *
  */
+/*
+ * Copyright 2005 Sun Microsystems, Inc. All rights reserved.
+ */
 package javax.xml.crypto.test.dsig;
 
 import java.io.*;
@@ -37,6 +40,8 @@ import javax.xml.crypto.test.KeySelectors;
  * Test that recreates Phaos XMLDSig-3 test vectors
  * but with different keys. For now we are just focusing on
  * the exc-c14n vectors.
+ *
+ * @author Sean Mullan
  */
 public class CreatePhaosXMLDSig3Test extends TestCase {
 

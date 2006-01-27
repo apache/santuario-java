@@ -14,6 +14,9 @@
  *  limitations under the License.
  *
  */
+/*
+ * Copyright 2005 Sun Microsystems, Inc. All rights reserved.
+ */
 package javax.xml.crypto.test.dsig;
 
 import java.io.*;
@@ -35,6 +38,10 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.*;
 
+/*
+ * @author Sean Mullan
+ * @author Valerie Peng
+ */
 public class TestUtils {
     
     private static final String DSA_Y = "07066284216756577193658833512863439617178933165631848358445549382240081120085333137303066923542492834619027404463194956043802393462371310375123430985057160";
