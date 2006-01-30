@@ -380,7 +380,7 @@
 	           <exclude name="org/apache/xml/security/test/interop/InteropTest.java"/>
 	           <exclude name="**/TestVectorResolver.java"/>
 	           <exclude name="**/IBMTest.java"/>
-	           <exclude name="javax/xml/crypto/**/*Test.java"/>
+	           <exclude name="javax/xml/crypto/**"/>
 	         </fileset>
 	       </batchtest>
 	       <test if="ibm.available" name="org.apache.xml.security.test.interop.IBMTest" todir="${dir.build.junit.xml}"/>
