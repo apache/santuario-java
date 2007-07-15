@@ -30,7 +30,9 @@ import org.w3c.dom.Element;
  *
  */
 public abstract class Algorithm extends SignatureElementProxy {
-
+	public Algorithm() {
+		
+	};
    /**
     *
     * @param doc

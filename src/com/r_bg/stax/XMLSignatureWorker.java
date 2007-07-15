@@ -1,0 +1,320 @@
+package com.r_bg.stax;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import javax.xml.crypto.Data;
+import javax.xml.crypto.KeySelectorResult;
+import javax.xml.crypto.MarshalException;
+import javax.xml.crypto.dsig.CanonicalizationMethod;
+import javax.xml.crypto.dsig.DigestMethod;
+import javax.xml.crypto.dsig.Reference;
+import javax.xml.crypto.dsig.SignatureMethod;
+import javax.xml.crypto.dsig.SignedInfo;
+import javax.xml.crypto.dsig.XMLSignContext;
+import javax.xml.crypto.dsig.XMLSignature;
+import javax.xml.crypto.dsig.XMLSignatureException;
+import javax.xml.crypto.dsig.XMLValidateContext;
+import javax.xml.crypto.dsig.keyinfo.KeyInfo;
+import javax.xml.stream.XMLStreamReader;
+
+import org.apache.xml.security.algorithms.JCEMapper;
+import org.apache.xml.security.algorithms.MessageDigestAlgorithm;
+import org.apache.xml.security.algorithms.SignatureAlgorithm;
+import org.apache.xml.security.exceptions.Base64DecodingException;
+import org.apache.xml.security.utils.Base64;
+import org.apache.xml.security.utils.DigesterOutputStream;
+
+class Constants {
+	public static final String DS_URI="http://www.w3.org/2000/09/xmldsig#";
+}
+
+
+
+
+class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {	
+	boolean readDigestValue=false;
+	String uri;
+	String c14nType;
+	String digestMethod;
+	byte[] digestValue;
+	byte[] calculateDigestValue;
+	boolean correct=false;
+	DigesterOutputStream os;
+	public StaxWorker read(XMLStreamReader reader) {
+		switch (reader.getEventType()) {
+		
+		case XMLStreamReader.START_ELEMENT: 
+			if(Constants.DS_URI.equals(reader.getNamespaceURI())) {
+			  String name=reader.getLocalName();
+			  if (name.equals("Reference") ) {
+				uri=reader.getAttributeValue(null,"URI");
+			  }
+			  if (name.equals("DigestMethod")) {
+				digestMethod=reader.getAttributeValue(null,"Algorithm");				 
+				try {
+					MessageDigest ms = MessageDigest.getInstance(
+							JCEMapper.translateURItoJCEID(digestMethod));
+					os=new DigesterOutputStream(ms);
+				} catch (NoSuchAlgorithmException e) {
+					//TODO: Better error handling.
+					e.printStackTrace();
+				}				
+			  }
+			  if (name.equals("DigestValue")) {
+				readDigestValue=true;
+			  }			
+			}
+			break;
+		case XMLStreamReader.END_ELEMENT: 
+		    if (Constants.DS_URI.equals(reader.getNamespaceURI())) {
+			  if (reader.getLocalName().equals("DigestValue")) {
+				readDigestValue=false;
+			  }
+		    }
+		    break;
+		case XMLStreamReader.CHARACTERS:		
+			if (readDigestValue) {
+				try {
+					digestValue=Base64.decode(reader.getText());
+				} catch (Base64DecodingException e) {
+					e.printStackTrace();
+				}
+		     }
+			break;
+		}
+		return null;
+	}
+	public StaxWatcher remove() {		
+		return new IdWatcher(uri.substring(1),this,os);
+	}
+	/* (non-Javadoc)
+	 * @see com.r_bg.stax.DigestResultListener#setResult(byte[])
+	 */
+	public void setResult(byte[] result) {
+		calculateDigestValue=os.getDigestValue();
+		correct=Arrays.equals(calculateDigestValue, digestValue);
+		
+	}
+	public List getTransforms() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	public DigestMethod getDigestMethod() {
+		return null;
+	}
+	public String getId() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	public byte[] getDigestValue() {	
+		return digestValue;
+	}
+	public byte[] getCalculatedDigestValue() {
+		return calculateDigestValue;
+	}
+	public boolean validate(XMLValidateContext validateContext) throws XMLSignatureException {
+		return correct;
+	}
+	public Data getDereferencedData() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	public InputStream getDigestInputStream() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	public String getURI() {
+		return uri;
+	}
+	public String getType() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	public boolean isFeatureSupported(String feature) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+	
+}
+class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
+	ByteArrayOutputStream bos=new ByteArrayOutputStream(); 
+	boolean initial=true;
+	C14nWorker c14n=new C14nWorker(this,bos);
+	List<ReferenceWorker> references=new ArrayList<ReferenceWorker>();
+	String signatureMethod;
+	String c14nMethod;
+	public StaxWorker read(XMLStreamReader reader) {
+		if (reader.getEventType()==XMLStreamReader.START_ELEMENT && Constants.DS_URI.equals(reader.getNamespaceURI())) {
+			String name=reader.getLocalName();
+			if (name.equals("Reference") ) {
+				ReferenceWorker r=new ReferenceWorker();
+				references.add(r);
+				return r;			
+			}
+			if (name.equals("SignatureMethod")) {
+				signatureMethod=reader.getAttributeValue(null,"Algorithm");
+			}
+			if (name.equals("CanonicalizationMethod")) {
+				//TODO: Change c14n.
+				c14nMethod=reader.getAttributeValue(null,"Algorithm");
+			}
+		}
+		if (initial) {
+			initial=false;
+			return c14n;
+		}
+		
+		return null;
+	}
+
+	public StaxWatcher remove() {
+		return null;
+	}
+
+	public CanonicalizationMethod getCanonicalizationMethod() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public SignatureMethod getSignatureMethod() {
+		return null;
+	}
+
+	public List getReferences() {
+		return references;
+	}
+
+	public String getId() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public InputStream getCanonicalizedData() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public boolean isFeatureSupported(String feature) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	public void setResult(byte[] result) {		
+		
+	}
+	
+}
+class SignatureWatcher implements StaxWatcher {	
+	public StaxWorker watch(XMLStreamReader reader, StaxSignatureVerificator sig) {
+		String name=reader.getLocalName();
+		String uri=reader.getNamespaceURI();
+		if (name.equals("Signature") && 
+				uri.equals(Constants.DS_URI)) {			
+			XMLSignatureWorker s=new XMLSignatureWorker();
+			sig.addSignature(s);
+			return s;
+		}
+		
+		return null;
+	}
+}
+
+public class XMLSignatureWorker implements StaxWorker,XMLSignature {		
+	SignedInfoWorker si;
+	private boolean readSignatureValue=false;
+	private byte[] signatureValue;	
+	public StaxWorker read(XMLStreamReader reader) {
+		switch (reader.getEventType()) {
+		  case XMLStreamReader.START_ELEMENT:
+			if (Constants.DS_URI.equals(reader.getNamespaceURI())) {
+				String name=reader.getLocalName();
+				if (name.equals("SignedInfo") ) {
+					si=new SignedInfoWorker();
+					return si;			
+				}
+				if (name.equals("SignatureValue")) {
+					readSignatureValue=true;
+				}			
+			}
+			break;
+		  case XMLStreamReader.END_ELEMENT: 
+			if (Constants.DS_URI.equals(reader.getNamespaceURI())) {
+				if (reader.getLocalName().equals("SignatureValue")) {
+					readSignatureValue=false;
+				}
+			}
+			break;
+		  case XMLStreamReader.CHARACTERS:		
+			if (readSignatureValue) {
+				try {					
+					signatureValue=Base64.decode(reader.getText());
+				} catch (Base64DecodingException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+		    }
+		    break;
+	    }
+		return null;
+	}
+	
+	public StaxWatcher remove() {		
+		return null;
+	}
+	public boolean validate(XMLValidateContext validateContext) throws XMLSignatureException {
+		StaxValidateContext ctx=(StaxValidateContext) validateContext;
+		try {
+			for (Reference ref: si.references) {
+				if (!ref.validate(ctx))
+					return false;
+			}
+			SignatureAlgorithm sa=new SignatureAlgorithm(si.signatureMethod);
+			sa.initVerify(ctx.key);
+			sa.update(si.bos.toByteArray());			
+			return sa.verify(signatureValue);
+		} catch (org.apache.xml.security.signature.XMLSignatureException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return false;
+	}
+	public KeyInfo getKeyInfo() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	public SignedInfo getSignedInfo() {
+		return si;
+	}
+	public List getObjects() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	public String getId() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	public SignatureValue getSignatureValue() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	public void sign(XMLSignContext signContext) throws MarshalException, XMLSignatureException {
+		// TODO Auto-generated method stub
+		
+	}
+	public KeySelectorResult getKeySelectorResult() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	public boolean isFeatureSupported(String feature) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+	
+}

@@ -17,6 +17,7 @@
 package org.apache.xml.security.utils;
 
 import java.io.ByteArrayOutputStream;
+import java.security.MessageDigest;
 
 import org.apache.xml.security.algorithms.MessageDigestAlgorithm;
 
@@ -26,11 +27,11 @@ import org.apache.xml.security.algorithms.MessageDigestAlgorithm;
  */
 public class DigesterOutputStream extends ByteArrayOutputStream {
     final static byte none[]="error".getBytes();
-    final MessageDigestAlgorithm mda;
+    final MessageDigest mda;
 	/**
 	 * @param mda
 	 */
-	public DigesterOutputStream(MessageDigestAlgorithm mda) {
+	public DigesterOutputStream(MessageDigest mda) {
         this.mda=mda;		
 	}
 
