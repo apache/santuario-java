@@ -684,7 +684,7 @@ private Element digestValueElement;
          MessageDigestAlgorithm mda = this.getMessageDigestAlgorithm();
 
          mda.reset();
-         DigesterOutputStream diOs=new DigesterOutputStream(mda);
+         DigesterOutputStream diOs=new DigesterOutputStream(mda.getAlgorithm());
          OutputStream os=new UnsyncBufferedOutputStream(diOs);
          XMLSignatureInput output=this.dereferenceURIandPerformTransforms(os);         
          output.updateOutputStream(os);

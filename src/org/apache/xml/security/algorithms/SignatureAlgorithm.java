@@ -78,6 +78,9 @@ public class SignatureAlgorithm extends Algorithm {
 
    private String algorithmURI;
 
+   public SignatureAlgorithm(String algorithmURI) {	   
+	   this.algorithmURI = algorithmURI;
+   }
    /**
     * Constructor SignatureAlgorithm
     *
