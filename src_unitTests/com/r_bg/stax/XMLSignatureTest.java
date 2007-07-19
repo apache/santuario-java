@@ -149,7 +149,7 @@ public class XMLSignatureTest extends TestCase {
 		while ((reader.getEventType())!=XMLStreamReader.END_DOCUMENT) {
 			reader.next();
 		}		
-		XMLSignatureFactory fac=XMLSignatureFactory.getInstance("Stax");
+		XMLSignatureFactory fac=XMLSignatureFactory.getInstance("Stax", new com.r_bg.stax.StaxProvider());
 		stx.setSignatureNumber(0);
 		XMLSignature sig=fac.unmarshalXMLSignature(stx);	
 		if (!((Reference)sig.getSignedInfo().getReferences().get(0)).validate(stx)) {
@@ -201,7 +201,7 @@ public class XMLSignatureTest extends TestCase {
 		while ((reader.getEventType())!=XMLStreamReader.END_DOCUMENT) {
 			reader.next();
 		}		
-		XMLSignatureFactory fac=XMLSignatureFactory.getInstance("Stax" );
+		XMLSignatureFactory fac=XMLSignatureFactory.getInstance("Stax", new com.r_bg.stax.StaxProvider() );
 		stx.setSignatureNumber(0);
 		XMLSignature sig=fac.unmarshalXMLSignature(stx);
 		assertFalse("Signature must be wrong",
@@ -236,7 +236,7 @@ public class XMLSignatureTest extends TestCase {
 			reader.next();
 		} while ((reader.getEventType())!=XMLStreamReader.END_DOCUMENT);
 		System.out.println("Nombre: "+nombre+" Apellidos:"+apellidos);
-		XMLSignatureFactory fac=XMLSignatureFactory.getInstance("Stax");
+		XMLSignatureFactory fac=XMLSignatureFactory.getInstance("Stax", new com.r_bg.stax.StaxProvider());
 		stx.setSignatureNumber(0);
 		XMLSignature sig=fac.unmarshalXMLSignature(stx);	
 		if (!sig.validate(stx)) {
