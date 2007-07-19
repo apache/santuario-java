@@ -9,6 +9,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import javax.xml.crypto.Data;
+import javax.xml.crypto.KeySelector;
+import javax.xml.crypto.KeySelectorException;
 import javax.xml.crypto.KeySelectorResult;
 import javax.xml.crypto.MarshalException;
 import javax.xml.crypto.dsig.CanonicalizationMethod;
@@ -275,7 +277,17 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 					return false;
 			}
 			SignatureAlgorithm sa=new SignatureAlgorithm(si.signatureMethod);
-			sa.initVerify(ctx.key);
+			// get key from KeySelector
+                        KeySelectorResult ksr = null;
+                        try {
+                            ksr = ctx.getKeySelector().select(getKeyInfo(), 
+				KeySelector.Purpose.VERIFY, 
+				getSignedInfo().getSignatureMethod(), 
+				validateContext);
+                        } catch (KeySelectorException kse) {
+                            throw new XMLSignatureException(kse);
+                        }
+			sa.initVerify(ksr.getKey());
 			sa.update(si.bos.toByteArray());			
 			return sa.verify(signatureValue);
 		} catch (org.apache.xml.security.signature.XMLSignatureException e) {
