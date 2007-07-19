@@ -145,7 +145,7 @@ public class XMLSignatureTest extends TestCase {
 		im.setProperty("javax.xml.stream.supportDTD", new Boolean(false));		
 		XMLStreamReader reader=im.createXMLStreamReader(new ByteArrayInputStream(in.getBytes()));
 		StaxValidateContext stx = StaxValidateContext.createEnvolopedValidator(getKey(),reader);		
-		reader=im.createFilteredReader(reader, stx.getStreamReader());
+		reader=im.createFilteredReader(reader, stx.getStreamFilter());
 		while ((reader.getEventType())!=XMLStreamReader.END_DOCUMENT) {
 			reader.next();
 		}		
@@ -197,7 +197,7 @@ public class XMLSignatureTest extends TestCase {
 		im.setProperty("javax.xml.stream.supportDTD", new Boolean(false));		
 		XMLStreamReader reader=im.createXMLStreamReader(new ByteArrayInputStream(in.getBytes()));
 		StaxValidateContext stx = StaxValidateContext.createEnvolopedValidator(getKey(),reader);		
-		reader=im.createFilteredReader(reader, stx.getStreamReader());
+		reader=im.createFilteredReader(reader, stx.getStreamFilter());
 		while ((reader.getEventType())!=XMLStreamReader.END_DOCUMENT) {
 			reader.next();
 		}		
@@ -215,7 +215,7 @@ public class XMLSignatureTest extends TestCase {
 		im.setProperty("javax.xml.stream.supportDTD", new Boolean(false));		
 		XMLStreamReader reader=im.createXMLStreamReader(new FileInputStream("alumnoEnveloped.xml"));
 		StaxValidateContext stx = StaxValidateContext.createEnvolopedValidator(getKey(),reader);		
-		reader=im.createFilteredReader(reader, stx.getStreamReader());		
+		reader=im.createFilteredReader(reader, stx.getStreamFilter());		
 		String nombre=null;
 	    String apellidos=null;
  	    do {
