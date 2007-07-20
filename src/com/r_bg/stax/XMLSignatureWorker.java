@@ -53,6 +53,7 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 	boolean correct=false;
 	DigesterOutputStream os;
 	private String id;
+	private String type;
 	public StaxWorker read(XMLStreamReader reader) {
 		switch (reader.getEventType()) {
 		
@@ -62,6 +63,7 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 			  if (name.equals("Reference") ) {
 				uri=reader.getAttributeValue(null,"URI");
 				id=reader.getAttributeValue(null,"Id");
+				type=reader.getAttributeValue(null,"Type");
 			  }
 			  if (name.equals("DigestMethod")) {
 				digestMethod=reader.getAttributeValue(null,"Algorithm");				 
@@ -144,8 +146,7 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 		return uri;
 	}
 	public String getType() {
-		// TODO Auto-generated method stub
-		return null;
+		return type;
 	}
 	public boolean isFeatureSupported(String feature) {
 		// TODO Auto-generated method stub
