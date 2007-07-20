@@ -93,7 +93,11 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 		return null;
 	}
 	public StaxWatcher remove() {		
+	    if (uri != null && !uri.isEmpty()) {
 		return new IdWatcher(uri.substring(1),this,os);
+	    } else {
+		return null;
+	    }
 	}
 	/* (non-Javadoc)
 	 * @see com.r_bg.stax.DigestResultListener#setResult(byte[])
@@ -231,11 +235,15 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 	SignedInfoWorker si;
 	private boolean readSignatureValue=false;
 	private byte[] signatureValue;	
+	private String id;
 	public StaxWorker read(XMLStreamReader reader) {
 		switch (reader.getEventType()) {
 		  case XMLStreamReader.START_ELEMENT:
 			if (Constants.DS_URI.equals(reader.getNamespaceURI())) {
 				String name=reader.getLocalName();
+				if (name.equals("Signature") ) {
+					id=reader.getAttributeValue(null,"Id");
+				}
 				if (name.equals("SignedInfo") ) {
 					si=new SignedInfoWorker();
 					return si;			
@@ -309,8 +317,7 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 		return null;
 	}
 	public String getId() {
-		// TODO Auto-generated method stub
-		return null;
+		return id;
 	}
 	public SignatureValue getSignatureValue() {
 		// TODO Auto-generated method stub
