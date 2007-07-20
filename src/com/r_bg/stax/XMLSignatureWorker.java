@@ -21,6 +21,7 @@ import javax.xml.crypto.dsig.DigestMethod;
 import javax.xml.crypto.dsig.Reference;
 import javax.xml.crypto.dsig.SignatureMethod;
 import javax.xml.crypto.dsig.SignedInfo;
+import javax.xml.crypto.dsig.Transform;
 import javax.xml.crypto.dsig.TransformException;
 import javax.xml.crypto.dsig.XMLSignContext;
 import javax.xml.crypto.dsig.XMLSignature;
@@ -41,6 +42,41 @@ class Constants {
 }
 
 
+class TransformWorker implements StaxWorker, Transform {
+	private String algorithm;
+	public StaxWorker read(XMLStreamReader reader) {
+		switch (reader.getEventType()) {
+		
+		case XMLStreamReader.START_ELEMENT: 
+			if(Constants.DS_URI.equals(reader.getNamespaceURI())) {
+			  String name=reader.getLocalName();
+			  if (name.equals("Transform") ) {
+				algorithm=reader.getAttributeValue(null,"Algorithm");
+			  }
+			}
+			break;
+		}
+		return null;
+	}
+	public StaxWatcher remove() {
+		return null;
+	}
+	public String getAlgorithm() {
+		return algorithm;
+	}
+	public AlgorithmParameterSpec getParameterSpec() {
+		return null;
+	}
+	public boolean isFeatureSupported(String feature) {
+		return false;
+	}
+	public Data transform(Data data, XMLCryptoContext context) throws TransformException {
+		throw new UnsupportedOperationException();
+	}
+	public Data transform(Data data, XMLCryptoContext context, OutputStream os) throws TransformException {
+		throw new UnsupportedOperationException();
+	}
+}
 
 
 class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {	
@@ -54,6 +90,7 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 	DigesterOutputStream os;
 	private String id;
 	private String type;
+	List<TransformWorker> transforms=new ArrayList<TransformWorker>();
 	public StaxWorker read(XMLStreamReader reader) {
 		switch (reader.getEventType()) {
 		
@@ -79,6 +116,11 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 			  if (name.equals("DigestValue")) {
 				readDigestValue=true;
 			  }			
+			  if (name.equals("Transform")) {
+				TransformWorker t=new TransformWorker();
+				transforms.add(t);
+				return t;			
+			  }
 			}
 			break;
 		case XMLStreamReader.END_ELEMENT: 
@@ -116,8 +158,7 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 		
 	}
 	public List getTransforms() {
-		// TODO Auto-generated method stub
-		return null;
+		return transforms;
 	}
 	public DigestMethod getDigestMethod() {
 		return new DigestMethod() {
