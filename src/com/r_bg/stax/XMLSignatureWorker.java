@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.spec.AlgorithmParameterSpec;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -193,7 +194,17 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 	}
 
 	public SignatureMethod getSignatureMethod() {
-		return null;
+		return new SignatureMethod() {
+			public AlgorithmParameterSpec getParameterSpec() {
+				return null;
+			}
+			public String getAlgorithm() {
+				return signatureMethod;
+			}
+			public boolean isFeatureSupported(String feature) {
+				return false;
+			}
+		};
 	}
 
 	public List getReferences() {
