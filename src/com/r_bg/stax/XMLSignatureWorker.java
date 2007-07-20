@@ -1,6 +1,7 @@
 package com.r_bg.stax;
 
 import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
 import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -14,11 +15,13 @@ import javax.xml.crypto.KeySelector;
 import javax.xml.crypto.KeySelectorException;
 import javax.xml.crypto.KeySelectorResult;
 import javax.xml.crypto.MarshalException;
+import javax.xml.crypto.XMLCryptoContext;
 import javax.xml.crypto.dsig.CanonicalizationMethod;
 import javax.xml.crypto.dsig.DigestMethod;
 import javax.xml.crypto.dsig.Reference;
 import javax.xml.crypto.dsig.SignatureMethod;
 import javax.xml.crypto.dsig.SignedInfo;
+import javax.xml.crypto.dsig.TransformException;
 import javax.xml.crypto.dsig.XMLSignContext;
 import javax.xml.crypto.dsig.XMLSignature;
 import javax.xml.crypto.dsig.XMLSignatureException;
@@ -189,8 +192,23 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 	}
 
 	public CanonicalizationMethod getCanonicalizationMethod() {
-		// TODO Auto-generated method stub
-		return null;
+		return new CanonicalizationMethod() {
+			public AlgorithmParameterSpec getParameterSpec() {
+				return null;
+			}
+			public String getAlgorithm() {
+				return c14nMethod;
+			}
+			public boolean isFeatureSupported(String feature) {
+				return false;
+			}
+			public Data transform(Data data, XMLCryptoContext context) throws TransformException {
+				throw new UnsupportedOperationException();
+			}
+			public Data transform(Data data, XMLCryptoContext context, OutputStream os) throws TransformException {
+				throw new UnsupportedOperationException();
+			}
+		};
 	}
 
 	public SignatureMethod getSignatureMethod() {
