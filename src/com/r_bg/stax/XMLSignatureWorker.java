@@ -231,26 +231,19 @@ class SignatureWatcher implements StaxWatcher {
 	}
 }
 
-public class XMLSignatureWorker implements StaxWorker,XMLSignature {		
-	SignedInfoWorker si;
-	private boolean readSignatureValue=false;
-	private byte[] signatureValue;	
+class SignatureValueWorker implements StaxWorker,XMLSignature.SignatureValue {		
 	private String id;
+	private byte[] signatureValue;
+	private boolean readSignatureValue=false;
 	public StaxWorker read(XMLStreamReader reader) {
 		switch (reader.getEventType()) {
 		  case XMLStreamReader.START_ELEMENT:
 			if (Constants.DS_URI.equals(reader.getNamespaceURI())) {
 				String name=reader.getLocalName();
-				if (name.equals("Signature") ) {
+				if (name.equals("SignatureValue") ) {
 					id=reader.getAttributeValue(null,"Id");
-				}
-				if (name.equals("SignedInfo") ) {
-					si=new SignedInfoWorker();
-					return si;			
-				}
-				if (name.equals("SignatureValue")) {
 					readSignatureValue=true;
-				}			
+				}
 			}
 			break;
 		  case XMLStreamReader.END_ELEMENT: 
@@ -268,9 +261,56 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-		    }
-		    break;
-	    }
+		    	}
+		    	break;
+		}
+		return null;
+	}
+
+	public StaxWatcher remove() {		
+		return null;
+	}
+
+	public boolean isFeatureSupported(String feature) {
+		return false;
+	}
+
+	public String getId() {
+	    return id;
+	}
+
+	public byte[] getValue() {
+	    return (byte[]) signatureValue.clone();
+	}
+
+	public boolean validate(XMLValidateContext validateContext) throws XMLSignatureException {
+	    throw new UnsupportedOperationException();
+	}
+}
+
+public class XMLSignatureWorker implements StaxWorker,XMLSignature {		
+	SignedInfoWorker si;
+	SignatureValueWorker sv;
+	private String id;
+	public StaxWorker read(XMLStreamReader reader) {
+		switch (reader.getEventType()) {
+		  case XMLStreamReader.START_ELEMENT:
+			if (Constants.DS_URI.equals(reader.getNamespaceURI())) {
+				String name=reader.getLocalName();
+				if (name.equals("Signature") ) {
+					id=reader.getAttributeValue(null,"Id");
+				}
+				if (name.equals("SignedInfo") ) {
+					si=new SignedInfoWorker();
+					return si;			
+				}
+				if (name.equals("SignatureValue")) {
+					sv=new SignatureValueWorker();
+					return sv;
+				}			
+			}
+			break;
+	    	}
 		return null;
 	}
 	
@@ -297,7 +337,7 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
                         }
 			sa.initVerify(ksr.getKey());
 			sa.update(si.bos.toByteArray());			
-			return sa.verify(signatureValue);
+			return sa.verify(sv.getValue());
 		} catch (org.apache.xml.security.signature.XMLSignatureException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -320,8 +360,7 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 		return id;
 	}
 	public SignatureValue getSignatureValue() {
-		// TODO Auto-generated method stub
-		return null;
+		return sv;
 	}
 	public void sign(XMLSignContext signContext) throws MarshalException, XMLSignatureException {
 		// TODO Auto-generated method stub
