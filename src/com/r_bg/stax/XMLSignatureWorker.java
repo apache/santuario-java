@@ -126,7 +126,7 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 		return id;
 	}
 	public byte[] getDigestValue() {	
-		return digestValue;
+		return (byte[]) digestValue.clone();
 	}
 	public byte[] getCalculatedDigestValue() {
 		return calculateDigestValue;
