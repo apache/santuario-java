@@ -120,7 +120,17 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 		return null;
 	}
 	public DigestMethod getDigestMethod() {
-		return null;
+		return new DigestMethod() {
+			public AlgorithmParameterSpec getParameterSpec() {
+				return null;
+			}
+			public String getAlgorithm() {
+				return digestMethod;
+			}
+			public boolean isFeatureSupported(String feature) {
+				return false;
+			}
+		};
 	}
 	public String getId() {
 		return id;
