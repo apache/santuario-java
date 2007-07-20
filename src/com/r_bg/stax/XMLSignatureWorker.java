@@ -155,9 +155,13 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 	List<ReferenceWorker> references=new ArrayList<ReferenceWorker>();
 	String signatureMethod;
 	String c14nMethod;
+	private String id;
 	public StaxWorker read(XMLStreamReader reader) {
 		if (reader.getEventType()==XMLStreamReader.START_ELEMENT && Constants.DS_URI.equals(reader.getNamespaceURI())) {
 			String name=reader.getLocalName();
+			if (name.equals("SignedInfo") ) {
+				id=reader.getAttributeValue(null,"Id");
+			}
 			if (name.equals("Reference") ) {
 				ReferenceWorker r=new ReferenceWorker();
 				references.add(r);
@@ -197,8 +201,7 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 	}
 
 	public String getId() {
-		// TODO Auto-generated method stub
-		return null;
+		return id;
 	}
 
 	public InputStream getCanonicalizedData() {
