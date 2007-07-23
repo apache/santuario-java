@@ -23,6 +23,7 @@ import javax.xml.crypto.dsig.SignatureMethod;
 import javax.xml.crypto.dsig.SignedInfo;
 import javax.xml.crypto.dsig.Transform;
 import javax.xml.crypto.dsig.TransformException;
+import javax.xml.crypto.dsig.XMLObject;
 import javax.xml.crypto.dsig.XMLSignContext;
 import javax.xml.crypto.dsig.XMLSignature;
 import javax.xml.crypto.dsig.XMLSignatureException;
@@ -373,10 +374,59 @@ class SignatureValueWorker implements StaxWorker,XMLSignature.SignatureValue {
 	}
 }
 
+class XMLObjectWorker implements StaxWorker, XMLObject {		
+
+    private String id;
+    private String mimeType;
+    private String encoding;
+
+    public StaxWorker read(XMLStreamReader reader) {
+	switch (reader.getEventType()) {
+	    case XMLStreamReader.START_ELEMENT: 
+		if(Constants.DS_URI.equals(reader.getNamespaceURI())) {
+		    String name = reader.getLocalName();
+		    if (name.equals("Object") ) {
+			id = reader.getAttributeValue(null, "Id");
+			mimeType = reader.getAttributeValue(null, "MimeType");
+			encoding = reader.getAttributeValue(null, "Encoding");
+		    }
+		}
+		break;
+	}
+	return null;
+    }
+
+    public StaxWatcher remove() {
+	return null;
+    }
+
+    public List getContent() {
+	return null;
+    }
+
+    public String getId() {
+	return id;
+    }
+
+    public String getMimeType() {
+	return mimeType;
+    }
+
+    public String getEncoding() {
+	return encoding;
+    }
+
+    public boolean isFeatureSupported(String feature) {
+	return false;
+    }
+}
+
 public class XMLSignatureWorker implements StaxWorker,XMLSignature {		
 	SignedInfoWorker si;
 	SignatureValueWorker sv;
+	XMLObjectWorker ov;
 	private String id;
+	private List<XMLObject> xmlObjects = new ArrayList<XMLObject>();
 	public StaxWorker read(XMLStreamReader reader) {
 		switch (reader.getEventType()) {
 		  case XMLStreamReader.START_ELEMENT:
@@ -392,6 +442,11 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 				if (name.equals("SignatureValue")) {
 					sv=new SignatureValueWorker();
 					return sv;
+				}			
+				if (name.equals("Object")) {
+					ov=new XMLObjectWorker();
+					xmlObjects.add(ov);
+					return ov;
 				}			
 			}
 			break;
@@ -438,8 +493,7 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 		return si;
 	}
 	public List getObjects() {
-		// TODO Auto-generated method stub
-		return null;
+		return xmlObjects;
 	}
 	public String getId() {
 		return id;
