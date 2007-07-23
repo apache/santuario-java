@@ -3,8 +3,10 @@ package com.r_bg.stax;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.InputStream;
+import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,6 +18,7 @@ import javax.xml.crypto.KeySelectorException;
 import javax.xml.crypto.KeySelectorResult;
 import javax.xml.crypto.MarshalException;
 import javax.xml.crypto.XMLCryptoContext;
+import javax.xml.crypto.XMLStructure;
 import javax.xml.crypto.dsig.CanonicalizationMethod;
 import javax.xml.crypto.dsig.DigestMethod;
 import javax.xml.crypto.dsig.Reference;
@@ -29,6 +32,12 @@ import javax.xml.crypto.dsig.XMLSignature;
 import javax.xml.crypto.dsig.XMLSignatureException;
 import javax.xml.crypto.dsig.XMLValidateContext;
 import javax.xml.crypto.dsig.keyinfo.KeyInfo;
+import javax.xml.crypto.dsig.keyinfo.KeyName;
+import javax.xml.crypto.dsig.keyinfo.KeyValue;
+import javax.xml.crypto.dsig.keyinfo.RetrievalMethod;
+import javax.xml.crypto.dsig.keyinfo.X509Data;
+import javax.xml.crypto.dsig.keyinfo.X509IssuerSerial;
+import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
 import org.apache.xml.security.algorithms.JCEMapper;
@@ -374,8 +383,145 @@ class SignatureValueWorker implements StaxWorker,XMLSignature.SignatureValue {
 	}
 }
 
-class XMLObjectWorker implements StaxWorker, XMLObject {		
+class X509DataWorker implements StaxWorker, X509Data {		
+    private List content = new ArrayList();
 
+    public StaxWorker read(XMLStreamReader reader) {
+	switch (reader.getEventType()) {
+	    case XMLStreamReader.START_ELEMENT: 
+		if(Constants.DS_URI.equals(reader.getNamespaceURI())) {
+		    String name = reader.getLocalName();
+		    if (name.equals("X509SubjectName")) {
+			try {
+			    content.add(reader.getElementText());
+			} catch (XMLStreamException xse) {
+			    xse.printStackTrace();
+			}
+		    } else if (name.equals("X509SKI")) {
+			try {
+			    byte[] ski = Base64.decode(reader.getElementText());
+			    content.add(ski);
+			} catch (Exception e) {
+			    e.printStackTrace();
+			}
+		    } else if (name.equals("X509IssuerSerial")) {
+			content.add(new X509IssuerSerial() {
+			    public String getIssuerName() {
+				return null;
+			    }
+			    public BigInteger getSerialNumber() {
+				return null;
+			    }
+			    public boolean isFeatureSupported(String feature) {
+				return false;
+			    }
+			});
+		    }
+		}
+		break;
+	}
+	return null;
+    }
+
+    public StaxWatcher remove() {
+	return null;
+    }
+
+    public List getContent() {
+	return content;
+    }
+
+    public boolean isFeatureSupported(String feature) {
+	return false;
+    }
+}
+			
+class KeyInfoWorker implements StaxWorker, KeyInfo {		
+    private String id;
+    private List content = new ArrayList();
+    public StaxWorker read(XMLStreamReader reader) {
+	switch (reader.getEventType()) {
+	    case XMLStreamReader.START_ELEMENT: 
+		if(Constants.DS_URI.equals(reader.getNamespaceURI())) {
+		    String name = reader.getLocalName();
+		    if (name.equals("KeyInfo") ) {
+			id = reader.getAttributeValue(null, "Id");
+		    } else if (name.equals("KeyName") ) {
+			try {
+			    final String keyName = reader.getElementText();
+			    content.add(new KeyName() {
+			        public String getName() {
+				    return keyName;
+			        }
+			        public boolean isFeatureSupported(String feature) {
+				    return false;
+			        }
+			    });
+			} catch (XMLStreamException xse) {
+			    xse.printStackTrace();
+			}
+		    } else if (name.equals("KeyValue") ) {
+			content.add(new KeyValue() {
+			    public PublicKey getPublicKey() {
+				return null;
+			    }
+		            public boolean isFeatureSupported(String feature) {
+			        return false;
+		            }
+			});
+		    } else if (name.equals("RetrievalMethod") ) {
+			final String uri = reader.getAttributeValue(null, "URI");
+			final String type = reader.getAttributeValue(null, "Type");
+			content.add(new RetrievalMethod() {
+			    public List getTransforms() {
+				return null;
+			    }
+			    public String getType() {
+				return type;
+			    }
+			    public String getURI() {
+				return uri;
+			    }
+			    public Data dereference(XMLCryptoContext context) {
+				throw new UnsupportedOperationException();
+			    }
+		            public boolean isFeatureSupported(String feature) {
+			        return false;
+		            }
+			});
+		    } else if (name.equals("X509Data") ) {
+			X509DataWorker xd = new X509DataWorker();
+			content.add(xd);
+			return xd;
+		    }
+		}
+		break;
+	}
+	return null;
+    }
+
+    public StaxWatcher remove() {
+	return null;
+    }
+
+    public List getContent() {
+	return content;
+    }
+
+    public String getId() {
+	return id;
+    }
+
+    public void marshal(XMLStructure parent, XMLCryptoContext context) throws MarshalException {
+	throw new UnsupportedOperationException();
+    }
+
+    public boolean isFeatureSupported(String feature) {
+	return false;
+    }
+}
+
+class XMLObjectWorker implements StaxWorker, XMLObject {		
     private String id;
     private String mimeType;
     private String encoding;
@@ -424,7 +570,8 @@ class XMLObjectWorker implements StaxWorker, XMLObject {
 public class XMLSignatureWorker implements StaxWorker,XMLSignature {		
 	SignedInfoWorker si;
 	SignatureValueWorker sv;
-	XMLObjectWorker ov;
+	XMLObjectWorker xo;
+	KeyInfoWorker ki;
 	private String id;
 	private List<XMLObject> xmlObjects = new ArrayList<XMLObject>();
 	public StaxWorker read(XMLStreamReader reader) {
@@ -444,9 +591,13 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 					return sv;
 				}			
 				if (name.equals("Object")) {
-					ov=new XMLObjectWorker();
-					xmlObjects.add(ov);
-					return ov;
+					xo=new XMLObjectWorker();
+					xmlObjects.add(xo);
+					return xo;
+				}			
+				if (name.equals("KeyInfo")) {
+					ki=new KeyInfoWorker();
+					return ki;
 				}			
 			}
 			break;
@@ -486,8 +637,7 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 		return false;
 	}
 	public KeyInfo getKeyInfo() {
-		// TODO Auto-generated method stub
-		return null;
+		return ki;
 	}
 	public SignedInfo getSignedInfo() {
 		return si;
