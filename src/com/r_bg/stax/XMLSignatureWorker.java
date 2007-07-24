@@ -10,6 +10,7 @@ import java.security.PublicKey;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import javax.xml.crypto.Data;
@@ -569,11 +570,12 @@ class XMLObjectWorker implements StaxWorker, XMLObject {
 
 public class XMLSignatureWorker implements StaxWorker,XMLSignature {		
 	SignedInfoWorker si;
-	SignatureValueWorker sv;
-	XMLObjectWorker xo;
-	KeyInfoWorker ki;
+	private SignatureValueWorker sv;
+	private XMLObjectWorker xo;
+	private KeyInfoWorker ki;
 	private String id;
 	private List<XMLObject> xmlObjects = new ArrayList<XMLObject>();
+	private KeySelectorResult ksr;
 	public StaxWorker read(XMLStreamReader reader) {
 		switch (reader.getEventType()) {
 		  case XMLStreamReader.START_ELEMENT:
@@ -609,6 +611,7 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 		return null;
 	}
 	public boolean validate(XMLValidateContext validateContext) throws XMLSignatureException {
+		if (validateContext == null) throw new NullPointerException();
 		StaxValidateContext ctx=(StaxValidateContext) validateContext;
 		try {
 			for (Reference ref: si.references) {
@@ -617,7 +620,6 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 			}
 			SignatureAlgorithm sa=new SignatureAlgorithm(si.signatureMethod);
 			// get key from KeySelector
-                        KeySelectorResult ksr = null;
                         try {
                             ksr = ctx.getKeySelector().select(getKeyInfo(), 
 				KeySelector.Purpose.VERIFY, 
@@ -630,11 +632,8 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 			sa.update(si.bos.toByteArray());			
 			return sa.verify(sv.getValue());
 		} catch (org.apache.xml.security.signature.XMLSignatureException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			throw new XMLSignatureException(e);
 		}
-		
-		return false;
 	}
 	public KeyInfo getKeyInfo() {
 		return ki;
@@ -643,7 +642,7 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 		return si;
 	}
 	public List getObjects() {
-		return xmlObjects;
+		return Collections.unmodifiableList(xmlObjects);
 	}
 	public String getId() {
 		return id;
@@ -653,15 +652,12 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 	}
 	public void sign(XMLSignContext signContext) throws MarshalException, XMLSignatureException {
 		// TODO Auto-generated method stub
-		
+		throw new UnsupportedOperationException();
 	}
 	public KeySelectorResult getKeySelectorResult() {
-		// TODO Auto-generated method stub
-		return null;
+		return ksr;
 	}
 	public boolean isFeatureSupported(String feature) {
-		// TODO Auto-generated method stub
 		return false;
 	}
-	
 }
