@@ -20,18 +20,7 @@ import javax.xml.crypto.KeySelectorResult;
 import javax.xml.crypto.MarshalException;
 import javax.xml.crypto.XMLCryptoContext;
 import javax.xml.crypto.XMLStructure;
-import javax.xml.crypto.dsig.CanonicalizationMethod;
-import javax.xml.crypto.dsig.DigestMethod;
-import javax.xml.crypto.dsig.Reference;
-import javax.xml.crypto.dsig.SignatureMethod;
-import javax.xml.crypto.dsig.SignedInfo;
-import javax.xml.crypto.dsig.Transform;
-import javax.xml.crypto.dsig.TransformException;
-import javax.xml.crypto.dsig.XMLObject;
-import javax.xml.crypto.dsig.XMLSignContext;
-import javax.xml.crypto.dsig.XMLSignature;
-import javax.xml.crypto.dsig.XMLSignatureException;
-import javax.xml.crypto.dsig.XMLValidateContext;
+import javax.xml.crypto.dsig.*;
 import javax.xml.crypto.dsig.keyinfo.KeyInfo;
 import javax.xml.crypto.dsig.keyinfo.KeyName;
 import javax.xml.crypto.dsig.keyinfo.KeyValue;
@@ -522,10 +511,95 @@ class KeyInfoWorker implements StaxWorker, KeyInfo {
     }
 }
 
+class SignaturePropertiesWorker implements StaxWorker, SignatureProperties {
+    private String id;
+    private List<SignatureProperty> props = new ArrayList<SignatureProperty>();
+
+    public StaxWorker read(XMLStreamReader reader) {
+	switch (reader.getEventType()) {
+	    case XMLStreamReader.START_ELEMENT: 
+		if(Constants.DS_URI.equals(reader.getNamespaceURI())) {
+		    String name = reader.getLocalName();
+		    if (name.equals("SignatureProperties") ) {
+			id = reader.getAttributeValue(null, "Id");
+		    } else if (name.equals("SignatureProperty")) {
+			final String id = reader.getAttributeValue(null, "Id");
+			final String target = reader.getAttributeValue(null, "Target");
+			props.add(new SignatureProperty() {
+			    public String getId() {
+				return id;
+			    }
+			    public String getTarget() {
+				return target;
+			    }
+			    public List getContent() {
+				// FIXME
+				return null;
+			    }
+			    public boolean isFeatureSupported(String feature) {
+				return false;
+			    }
+			});
+		    }
+		}
+		break;
+	}
+	return null;
+    }
+    public StaxWatcher remove() {
+	return null;
+    }
+    public String getId() {
+	return id;
+    }
+    public List getProperties() {
+	return Collections.unmodifiableList(props);
+    }
+    public boolean isFeatureSupported(String feature) {
+	return false;
+    }
+}
+
+class ManifestWorker implements StaxWorker, Manifest {		
+    private String id;
+    private List<Reference> refs = new ArrayList<Reference>();
+
+    public StaxWorker read(XMLStreamReader reader) {
+	switch (reader.getEventType()) {
+	    case XMLStreamReader.START_ELEMENT: 
+		if(Constants.DS_URI.equals(reader.getNamespaceURI())) {
+		    String name = reader.getLocalName();
+		    if (name.equals("Manifest") ) {
+			id = reader.getAttributeValue(null, "Id");
+		    } else if (name.equals("Reference")) {
+			ReferenceWorker rw = new ReferenceWorker();
+			refs.add(rw);
+			return rw;
+		    }
+		}
+		break;
+	}
+	return null;
+    }
+    public StaxWatcher remove() {
+	return null;
+    }
+    public String getId() {
+	return id;
+    }
+    public List getReferences() {
+	return Collections.unmodifiableList(refs);
+    }
+    public boolean isFeatureSupported(String feature) {
+	return false;
+    }
+}
+
 class XMLObjectWorker implements StaxWorker, XMLObject {		
     private String id;
     private String mimeType;
     private String encoding;
+    private List<XMLStructure> content = new ArrayList<XMLStructure>();
 
     public StaxWorker read(XMLStreamReader reader) {
 	switch (reader.getEventType()) {
@@ -536,42 +610,43 @@ class XMLObjectWorker implements StaxWorker, XMLObject {
 			id = reader.getAttributeValue(null, "Id");
 			mimeType = reader.getAttributeValue(null, "MimeType");
 			encoding = reader.getAttributeValue(null, "Encoding");
+		    } else if (name.equals("Manifest")) {
+			ManifestWorker mw = new ManifestWorker();
+			content.add(mw);
+			return mw;
+		    } else if (name.equals("SignatureProperties")) {
+			SignaturePropertiesWorker spw = new SignaturePropertiesWorker();
+			content.add(spw);
+			return spw;
 		    }
 		}
 		break;
 	}
 	return null;
     }
-
     public StaxWatcher remove() {
 	return null;
     }
-
     public List getContent() {
-	return null;
+	return Collections.unmodifiableList(content);
     }
-
     public String getId() {
 	return id;
     }
-
     public String getMimeType() {
 	return mimeType;
     }
-
     public String getEncoding() {
 	return encoding;
     }
-
     public boolean isFeatureSupported(String feature) {
 	return false;
     }
 }
 
 public class XMLSignatureWorker implements StaxWorker,XMLSignature {		
-	SignedInfoWorker si;
+	private SignedInfoWorker si;
 	private SignatureValueWorker sv;
-	private XMLObjectWorker xo;
 	private KeyInfoWorker ki;
 	private String id;
 	private List<XMLObject> xmlObjects = new ArrayList<XMLObject>();
@@ -593,7 +668,7 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 					return sv;
 				}			
 				if (name.equals("Object")) {
-					xo=new XMLObjectWorker();
+					XMLObjectWorker xo=new XMLObjectWorker();
 					xmlObjects.add(xo);
 					return xo;
 				}			
