@@ -1,5 +1,6 @@
 package com.r_bg.stax;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.InputStream;
@@ -7,6 +8,7 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.cert.CertificateFactory;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -158,7 +160,7 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 		
 	}
 	public List getTransforms() {
-		return transforms;
+		return Collections.unmodifiableList(transforms);
 	}
 	public DigestMethod getDigestMethod() {
 		return new DigestMethod() {
@@ -176,11 +178,11 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 	public String getId() {
 		return id;
 	}
-	public byte[] getDigestValue() {	
-		return (byte[]) digestValue.clone();
+	public byte[] getDigestValue() {
+		return digestValue == null ? null : (byte[]) digestValue.clone();
 	}
 	public byte[] getCalculatedDigestValue() {
-		return calculateDigestValue;
+		return calculateDigestValue == null ? null : (byte[]) calculateDigestValue.clone();
 	}
 	public boolean validate(XMLValidateContext validateContext) throws XMLSignatureException {
 		return correct;
@@ -200,11 +202,10 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 		return type;
 	}
 	public boolean isFeatureSupported(String feature) {
-		// TODO Auto-generated method stub
 		return false;
 	}
-	
 }
+
 class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 	ByteArrayOutputStream bos=new ByteArrayOutputStream(); 
 	boolean initial=true;
@@ -279,7 +280,7 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 	}
 
 	public List getReferences() {
-		return references;
+		return Collections.unmodifiableList(references);
 	}
 
 	public String getId() {
@@ -292,7 +293,6 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 	}
 
 	public boolean isFeatureSupported(String feature) {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
@@ -375,6 +375,7 @@ class SignatureValueWorker implements StaxWorker,XMLSignature.SignatureValue {
 
 class X509DataWorker implements StaxWorker, X509Data {		
     private List content = new ArrayList();
+    private CertificateFactory cf; 
 
     public StaxWorker read(XMLStreamReader reader) {
 	switch (reader.getEventType()) {
@@ -406,21 +407,38 @@ class X509DataWorker implements StaxWorker, X509Data {
 				return false;
 			    }
 			});
+		    } else if (name.equals("X509Certificate")) {
+			try {
+			    byte[] cert = Base64.decode(reader.getElementText());
+			    if (cf == null) {
+    				cf = CertificateFactory.getInstance("X.509");
+			    }
+			    content.add(cf.generateCertificate(new ByteArrayInputStream(cert)));
+			} catch (Exception e) {
+			    e.printStackTrace();
+			}
+		    } else if (name.equals("X509CRL")) {
+			try {
+			    byte[] crl = Base64.decode(reader.getElementText());
+			    if (cf == null) {
+    				cf = CertificateFactory.getInstance("X.509");
+			    }
+			    content.add(cf.generateCRL(new ByteArrayInputStream(crl)));
+			} catch (Exception e) {
+			    e.printStackTrace();
+			}
 		    }
 		}
 		break;
 	}
 	return null;
     }
-
     public StaxWatcher remove() {
 	return null;
     }
-
     public List getContent() {
-	return content;
+	return Collections.unmodifiableList(content);
     }
-
     public boolean isFeatureSupported(String feature) {
 	return false;
     }
@@ -489,23 +507,18 @@ class KeyInfoWorker implements StaxWorker, KeyInfo {
 	}
 	return null;
     }
-
     public StaxWatcher remove() {
 	return null;
     }
-
     public List getContent() {
-	return content;
+	return Collections.unmodifiableList(content);
     }
-
     public String getId() {
 	return id;
     }
-
     public void marshal(XMLStructure parent, XMLCryptoContext context) throws MarshalException {
 	throw new UnsupportedOperationException();
     }
-
     public boolean isFeatureSupported(String feature) {
 	return false;
     }
