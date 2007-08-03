@@ -29,7 +29,19 @@ public class StaxValidateContext implements XMLValidateContext {
 	}
 	
     public StaxValidateContext(Key key, XMLStreamReader reader) {
+	if (key == null || reader == null) {
+	    throw new NullPointerException();
+	}
 	setKeySelector(KeySelector.singletonKeySelector(key));
+	this.reader = reader;		
+	sig = new StaxSignatureVerificator();
+    }
+
+    public StaxValidateContext(KeySelector ks, XMLStreamReader reader) {
+	if (ks == null || reader == null) {
+	    throw new NullPointerException();
+	}
+	this.ks = ks;
 	this.reader = reader;		
 	sig = new StaxSignatureVerificator();
     }
