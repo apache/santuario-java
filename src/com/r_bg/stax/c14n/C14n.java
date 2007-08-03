@@ -33,7 +33,7 @@ public class C14n implements EventFilter,StreamFilter {
 	}
 	static void writeAttribute(XMLStreamReader in, int i, OutputStream os) throws IOException {
 		String result=in.getAttributePrefix(i);
-		if (result!=null) {
+		if (result!=null && result.length()!=0) {
 			os.write(result.getBytes());
 			os.write(':');
 		}
