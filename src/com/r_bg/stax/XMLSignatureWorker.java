@@ -45,39 +45,38 @@ class Constants {
 
 
 class TransformWorker implements StaxWorker, Transform {
-	private String algorithm;
-	public StaxWorker read(XMLStreamReader reader) {
-		switch (reader.getEventType()) {
-		
-		case XMLStreamReader.START_ELEMENT: 
-			if(Constants.DS_URI.equals(reader.getNamespaceURI())) {
-			  String name=reader.getLocalName();
-			  if (name.equals("Transform") ) {
-				algorithm=reader.getAttributeValue(null,"Algorithm");
-			  }
-			}
-			break;
+    private String algorithm;
+    public StaxWorker read(XMLStreamReader reader) {
+	switch (reader.getEventType()) {
+	    case XMLStreamReader.START_ELEMENT: 
+		if (Constants.DS_URI.equals(reader.getNamespaceURI())) {
+		    String name=reader.getLocalName();
+		    if (name.equals("Transform") ) {
+			algorithm=reader.getAttributeValue(null,"Algorithm");
+		    }
 		}
-		return null;
+	    break;
 	}
-	public StaxWatcher remove() {
-		return null;
-	}
-	public String getAlgorithm() {
-		return algorithm;
-	}
-	public AlgorithmParameterSpec getParameterSpec() {
-		return null;
-	}
-	public boolean isFeatureSupported(String feature) {
-		return false;
-	}
-	public Data transform(Data data, XMLCryptoContext context) throws TransformException {
-		throw new UnsupportedOperationException();
-	}
-	public Data transform(Data data, XMLCryptoContext context, OutputStream os) throws TransformException {
-		throw new UnsupportedOperationException();
-	}
+	return null;
+    }
+    public StaxWatcher remove() {
+	return null;
+    }
+    public String getAlgorithm() {
+	return algorithm;
+    }
+    public AlgorithmParameterSpec getParameterSpec() {
+	return null;
+    }
+    public boolean isFeatureSupported(String feature) {
+	return false;
+    }
+    public Data transform(Data data, XMLCryptoContext context) throws TransformException {
+	throw new UnsupportedOperationException();
+    }
+    public Data transform(Data data, XMLCryptoContext context, OutputStream os) throws TransformException {
+	throw new UnsupportedOperationException();
+    }
 }
 
 
@@ -145,8 +144,9 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 		return null;
 	}
 	public StaxWatcher remove() {		
-	    if (uri != null && !uri.isEmpty()) {
+	    if (uri != null && uri.startsWith("#")) {
 		return new IdWatcher(uri.substring(1),this,os);
+//		return new IdWatcher(uri.substring(1),this,System.out);
 	    } else {
 		return null;
 	    }
@@ -219,16 +219,13 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 			String name=reader.getLocalName();
 			if (name.equals("SignedInfo") ) {
 				id=reader.getAttributeValue(null,"Id");
-			}
-			if (name.equals("Reference") ) {
+			} else if (name.equals("Reference") ) {
 				ReferenceWorker r=new ReferenceWorker();
 				references.add(r);
 				return r;			
-			}
-			if (name.equals("SignatureMethod")) {
+			} else if (name.equals("SignatureMethod")) {
 				signatureMethod=reader.getAttributeValue(null,"Algorithm");
-			}
-			if (name.equals("CanonicalizationMethod")) {
+			} else if (name.equals("CanonicalizationMethod")) {
 				//TODO: Change c14n.
 				c14nMethod=reader.getAttributeValue(null,"Algorithm");
 			}
@@ -320,6 +317,7 @@ class SignatureValueWorker implements StaxWorker,XMLSignature.SignatureValue {
 	private String id;
 	private byte[] signatureValue;
 	private boolean readSignatureValue=false;
+	boolean isValid=false;
 	public StaxWorker read(XMLStreamReader reader) {
 		switch (reader.getEventType()) {
 		  case XMLStreamReader.START_ELEMENT:
@@ -369,7 +367,8 @@ class SignatureValueWorker implements StaxWorker,XMLSignature.SignatureValue {
 	}
 
 	public boolean validate(XMLValidateContext validateContext) throws XMLSignatureException {
-	    throw new UnsupportedOperationException();
+	    //FIXME: only returns cached status
+	    return isValid;
 	}
 }
 
@@ -619,7 +618,7 @@ class XMLObjectWorker implements StaxWorker, XMLObject {
 	    case XMLStreamReader.START_ELEMENT: 
 		if(Constants.DS_URI.equals(reader.getNamespaceURI())) {
 		    String name = reader.getLocalName();
-		    if (name.equals("Object") ) {
+		    if (name.equals("Object")) {
 			id = reader.getAttributeValue(null, "Id");
 			mimeType = reader.getAttributeValue(null, "MimeType");
 			encoding = reader.getAttributeValue(null, "Encoding");
@@ -631,6 +630,10 @@ class XMLObjectWorker implements StaxWorker, XMLObject {
 			SignaturePropertiesWorker spw = new SignaturePropertiesWorker();
 			content.add(spw);
 			return spw;
+		    } else if (name.equals("X509Data")) {
+			X509DataWorker xw = new X509DataWorker();
+			content.add(xw);
+			return xw;
 		    }
 		}
 		break;
@@ -671,21 +674,17 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 				String name=reader.getLocalName();
 				if (name.equals("Signature") ) {
 					id=reader.getAttributeValue(null,"Id");
-				}
-				if (name.equals("SignedInfo") ) {
+				} else if (name.equals("SignedInfo") ) {
 					si=new SignedInfoWorker();
 					return si;			
-				}
-				if (name.equals("SignatureValue")) {
+				} else if (name.equals("SignatureValue")) {
 					sv=new SignatureValueWorker();
 					return sv;
-				}			
-				if (name.equals("Object")) {
+				} else if (name.equals("Object")) {
 					XMLObjectWorker xo=new XMLObjectWorker();
 					xmlObjects.add(xo);
 					return xo;
-				}			
-				if (name.equals("KeyInfo")) {
+				} else if (name.equals("KeyInfo")) {
 					ki=new KeyInfoWorker();
 					return ki;
 				}			
@@ -718,7 +717,9 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
                         }
 			sa.initVerify(ksr.getKey());
 			sa.update(si.bos.toByteArray());			
-			return sa.verify(sv.getValue());
+			boolean isSignatureValid = sa.verify(sv.getValue());
+			sv.isValid = isSignatureValid;
+			return isSignatureValid;
 		} catch (org.apache.xml.security.signature.XMLSignatureException e) {
 			throw new XMLSignatureException(e);
 		}
