@@ -5,11 +5,15 @@ import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.security.KeyException;
+import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.cert.CertificateFactory;
 import java.security.spec.AlgorithmParameterSpec;
+import java.security.spec.DSAPublicKeySpec;
+import java.security.spec.RSAPublicKeySpec;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -372,6 +376,71 @@ class SignatureValueWorker implements StaxWorker,XMLSignature.SignatureValue {
 	}
 }
 
+class KeyValueWorker implements StaxWorker, KeyValue {		
+    private boolean isDSA = false;
+    private PublicKey key;
+    private BigInteger p, q, g, y, mod, exp;
+    public StaxWorker read(XMLStreamReader reader) {
+	switch (reader.getEventType()) {
+	    case XMLStreamReader.START_ELEMENT: 
+		if(Constants.DS_URI.equals(reader.getNamespaceURI())) {
+		    try {
+		        String name = reader.getLocalName();
+		        if (name.equals("DSAKeyValue")) {
+			    isDSA = true;
+		        } else if (name.equals("RSAKeyValue")) {
+			    isDSA = false;
+		        } else if (name.equals("Modulus")) {
+			    mod = new BigInteger(1, Base64.decode(reader.getElementText()));
+		        } else if (name.equals("Exponent")) {
+			    exp = new BigInteger(1, Base64.decode(reader.getElementText()));
+		        } else if (name.equals("P")) {
+			    p = new BigInteger(1, Base64.decode(reader.getElementText()));
+		        } else if (name.equals("Q")) {
+			    q = new BigInteger(1, Base64.decode(reader.getElementText()));
+		        } else if (name.equals("G")) {
+			    g = new BigInteger(1, Base64.decode(reader.getElementText()));
+		        } else if (name.equals("Y")) {
+			    y = new BigInteger(1, Base64.decode(reader.getElementText()));
+		        }
+		    } catch (Base64DecodingException e) {
+			e.printStackTrace();
+		    } catch (XMLStreamException e) {
+			e.printStackTrace();
+		    }
+		}
+		break;
+	}
+	return null;
+    }
+		
+    public StaxWatcher remove() {
+	return null;
+    }
+    public PublicKey getPublicKey() throws KeyException {
+	if (key == null) {
+	    try {
+		if (isDSA) {
+	            KeyFactory kf = KeyFactory.getInstance("DSA");
+	            DSAPublicKeySpec spec = new DSAPublicKeySpec(y, p, q, g);
+	            key = kf.generatePublic(spec);
+		} else {
+	            KeyFactory kf = KeyFactory.getInstance("RSA");
+	            RSAPublicKeySpec spec = new RSAPublicKeySpec(mod, exp);
+	            key = kf.generatePublic(spec);
+		}
+	    } catch (Exception e) {
+		throw new KeyException(e);
+	    }
+	}
+	return key;
+	
+    }
+    public boolean isFeatureSupported(String feature) {
+	return false;
+    }
+}
+
 class X509DataWorker implements StaxWorker, X509Data {		
     private List content = new ArrayList();
     private CertificateFactory cf; 
@@ -468,14 +537,9 @@ class KeyInfoWorker implements StaxWorker, KeyInfo {
 			    xse.printStackTrace();
 			}
 		    } else if (name.equals("KeyValue") ) {
-			content.add(new KeyValue() {
-			    public PublicKey getPublicKey() {
-				return null;
-			    }
-		            public boolean isFeatureSupported(String feature) {
-			        return false;
-		            }
-			});
+			KeyValueWorker kv = new KeyValueWorker();
+			content.add(kv);
+			return kv;
 		    } else if (name.equals("RetrievalMethod") ) {
 			final String uri = reader.getAttributeValue(null, "URI");
 			final String type = reader.getAttributeValue(null, "Type");
