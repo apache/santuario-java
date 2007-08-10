@@ -75,10 +75,12 @@ class TransformWorker implements StaxWorker, Transform {
     public boolean isFeatureSupported(String feature) {
 	return false;
     }
-    public Data transform(Data data, XMLCryptoContext context) throws TransformException {
+    public Data transform(Data data, XMLCryptoContext context) 
+	throws TransformException {
 	throw new UnsupportedOperationException();
     }
-    public Data transform(Data data, XMLCryptoContext context, OutputStream os) throws TransformException {
+    public Data transform(Data data, XMLCryptoContext context, OutputStream os) 
+	throws TransformException {
 	throw new UnsupportedOperationException();
     }
 }
@@ -212,8 +214,10 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 
 class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 	ByteArrayOutputStream bos=new ByteArrayOutputStream(); 
+	byte[] canonData;
 	boolean initial=true;
 	C14nWorker c14n=new C14nWorker(this,bos);
+//	C14nWorker c14n=new C14nWorker(this,System.out);
 	List<ReferenceWorker> references=new ArrayList<ReferenceWorker>();
 	String signatureMethod;
 	String c14nMethod;
@@ -243,6 +247,7 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 	}
 
 	public StaxWatcher remove() {
+		canonData = bos.toByteArray();
 		return null;
 	}
 
@@ -289,8 +294,7 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 	}
 
 	public InputStream getCanonicalizedData() {
-		// TODO Auto-generated method stub
-		return null;
+		return new ByteArrayInputStream(canonData);
 	}
 
 	public boolean isFeatureSupported(String feature) {
@@ -320,7 +324,6 @@ class SignatureWatcher implements StaxWatcher {
 class SignatureValueWorker implements StaxWorker,XMLSignature.SignatureValue {		
 	private String id;
 	private byte[] signatureValue;
-	private boolean readSignatureValue=false;
 	boolean isValid=false;
 	public StaxWorker read(XMLStreamReader reader) {
 		switch (reader.getEventType()) {
@@ -329,27 +332,17 @@ class SignatureValueWorker implements StaxWorker,XMLSignature.SignatureValue {
 				String name=reader.getLocalName();
 				if (name.equals("SignatureValue") ) {
 					id=reader.getAttributeValue(null,"Id");
-					readSignatureValue=true;
+					try {
+						signatureValue=Base64.decode(reader.getElementText());
+					} catch (Base64DecodingException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (XMLStreamException e) {
+						e.printStackTrace();
+					}
 				}
 			}
 			break;
-		  case XMLStreamReader.END_ELEMENT: 
-			if (Constants.DS_URI.equals(reader.getNamespaceURI())) {
-				if (reader.getLocalName().equals("SignatureValue")) {
-					readSignatureValue=false;
-				}
-			}
-			break;
-		  case XMLStreamReader.CHARACTERS:		
-			if (readSignatureValue) {
-				try {					
-					signatureValue=Base64.decode(reader.getText());
-				} catch (Base64DecodingException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-		    	}
-		    	break;
 		}
 		return null;
 	}
@@ -780,7 +773,7 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
                             throw new XMLSignatureException(kse);
                         }
 			sa.initVerify(ksr.getKey());
-			sa.update(si.bos.toByteArray());			
+			sa.update(si.canonData);			
 			boolean isSignatureValid = sa.verify(sv.getValue());
 			sv.isValid = isSignatureValid;
 			return isSignatureValid;
