@@ -219,7 +219,7 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 	C14nWorker c14n=new C14nWorker(this,bos);
 //	C14nWorker c14n=new C14nWorker(this,System.out);
 	List<ReferenceWorker> references=new ArrayList<ReferenceWorker>();
-	String signatureMethod;
+	StaxSignatureMethod signatureMethod;
 	String c14nMethod;
 	private String id;
 	public StaxWorker read(XMLStreamReader reader) {
@@ -232,7 +232,12 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 				references.add(r);
 				return r;			
 			} else if (name.equals("SignatureMethod")) {
-				signatureMethod=reader.getAttributeValue(null,"Algorithm");
+				try {
+				    signatureMethod = StaxSignatureMethod.unmarshal(reader);
+				    return signatureMethod;
+				} catch (MarshalException me) {
+				    me.printStackTrace();
+				}
 			} else if (name.equals("CanonicalizationMethod")) {
 				//TODO: Change c14n.
 				c14nMethod=reader.getAttributeValue(null,"Algorithm");
@@ -272,17 +277,7 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 	}
 
 	public SignatureMethod getSignatureMethod() {
-		return new SignatureMethod() {
-			public AlgorithmParameterSpec getParameterSpec() {
-				return null;
-			}
-			public String getAlgorithm() {
-				return signatureMethod;
-			}
-			public boolean isFeatureSupported(String feature) {
-				return false;
-			}
-		};
+		return signatureMethod;
 	}
 
 	public List getReferences() {
@@ -322,85 +317,116 @@ class SignatureWatcher implements StaxWatcher {
 }
 
 class SignatureValueWorker implements StaxWorker,XMLSignature.SignatureValue {		
-	private String id;
-	private byte[] signatureValue;
-	boolean isValid=false;
-	public StaxWorker read(XMLStreamReader reader) {
-		switch (reader.getEventType()) {
-		  case XMLStreamReader.START_ELEMENT:
-			if (Constants.DS_URI.equals(reader.getNamespaceURI())) {
-				String name=reader.getLocalName();
-				if (name.equals("SignatureValue") ) {
-					id=reader.getAttributeValue(null,"Id");
-					try {
-						signatureValue=Base64.decode(reader.getElementText());
-					} catch (Base64DecodingException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					} catch (XMLStreamException e) {
-						e.printStackTrace();
-					}
-				}
-			}
-			break;
+    private String id;
+    byte[] signatureValue;
+    boolean isValid=false;
+    private boolean readSignatureValue = false;
+    private StringBuffer buf = new StringBuffer();
+
+    public StaxWorker read(XMLStreamReader reader) {
+	switch (reader.getEventType()) {
+	  case XMLStreamReader.START_ELEMENT:
+	    if (Constants.DS_URI.equals(reader.getNamespaceURI())) {
+		String name=reader.getLocalName();
+		if (name.equals("SignatureValue") ) {
+		    id=reader.getAttributeValue(null,"Id");
+		    readSignatureValue = true;
 		}
-		return null;
+	    }
+	    break;
+	  case XMLStreamReader.END_ELEMENT:
+	    if (Constants.DS_URI.equals(reader.getNamespaceURI()) &&
+		reader.getLocalName().equals("SignatureValue")) {
+		readSignatureValue = false;
+	 	try {
+	            signatureValue = Base64.decode(buf.toString());
+		} catch (Base64DecodingException e) {
+		    e.printStackTrace();
+		}
+	    }
+	    break;
+	  case XMLStreamReader.CHARACTERS:
+	    if (readSignatureValue) {
+		buf = buf.append(reader.getText());
+	    }
+	    break;
 	}
+	return null;
+    }
 
-	public StaxWatcher remove() {		
-		return null;
-	}
+    public StaxWatcher remove() {		
+	return null;
+    }
 
-	public boolean isFeatureSupported(String feature) {
-		return false;
-	}
+    public boolean isFeatureSupported(String feature) {
+	return false;
+    }
 
-	public String getId() {
-	    return id;
-	}
+    public String getId() {
+        return id;
+    }
 
-	public byte[] getValue() {
-	    return (byte[]) signatureValue.clone();
-	}
+    public byte[] getValue() {
+        return (byte[]) signatureValue.clone();
+    }
 
-	public boolean validate(XMLValidateContext validateContext) throws XMLSignatureException {
-	    //FIXME: only returns cached status
-	    return isValid;
-	}
+    public boolean validate(XMLValidateContext validateContext) throws XMLSignatureException {
+        //FIXME: only returns cached status
+        return isValid;
+    }
 }
 
 class KeyValueWorker implements StaxWorker, KeyValue {		
     private boolean isDSA = false;
     private PublicKey key;
     private BigInteger p, q, g, y, mod, exp;
+    private boolean startDSA, startRSA;
+    private StringBuffer buf = new StringBuffer();
+
     public StaxWorker read(XMLStreamReader reader) {
 	switch (reader.getEventType()) {
 	    case XMLStreamReader.START_ELEMENT: 
 		if(Constants.DS_URI.equals(reader.getNamespaceURI())) {
+	            String name = reader.getLocalName();
+	            if (name.equals("DSAKeyValue")) {
+		        isDSA = true;
+			startDSA = true;
+	            } else if (name.equals("RSAKeyValue")) {
+		        isDSA = false;
+			startRSA = true;
+	            } 
+		}
+		break;
+	    case XMLStreamReader.END_ELEMENT: 
+		if(Constants.DS_URI.equals(reader.getNamespaceURI())) {
 		    try {
-		        String name = reader.getLocalName();
-		        if (name.equals("DSAKeyValue")) {
-			    isDSA = true;
-		        } else if (name.equals("RSAKeyValue")) {
-			    isDSA = false;
-		        } else if (name.equals("Modulus")) {
-			    mod = new BigInteger(1, Base64.decode(reader.getElementText()));
-		        } else if (name.equals("Exponent")) {
-			    exp = new BigInteger(1, Base64.decode(reader.getElementText()));
-		        } else if (name.equals("P")) {
-			    p = new BigInteger(1, Base64.decode(reader.getElementText()));
-		        } else if (name.equals("Q")) {
-			    q = new BigInteger(1, Base64.decode(reader.getElementText()));
-		        } else if (name.equals("G")) {
-			    g = new BigInteger(1, Base64.decode(reader.getElementText()));
-		        } else if (name.equals("Y")) {
-			    y = new BigInteger(1, Base64.decode(reader.getElementText()));
-		        }
-		    } catch (Base64DecodingException e) {
-			e.printStackTrace();
-		    } catch (XMLStreamException e) {
-			e.printStackTrace();
+	            String name = reader.getLocalName();
+	            if (name.equals("DSAKeyValue")) {
+		        startDSA = false;
+	            } else if (name.equals("RSAKeyValue")) {
+		        startRSA = false;
+	            } else if (name.equals("Modulus")) {
+		        mod = new BigInteger(1, Base64.decode(buf.toString()));
+	            } else if (name.equals("Exponent")) {
+		        exp = new BigInteger(1, Base64.decode(buf.toString()));
+	            } else if (name.equals("P")) {
+		        p = new BigInteger(1, Base64.decode(buf.toString()));
+	            } else if (name.equals("Q")) {
+		        q = new BigInteger(1, Base64.decode(buf.toString()));
+	            } else if (name.equals("G")) {
+		        g = new BigInteger(1, Base64.decode(buf.toString()));
+	            } else if (name.equals("Y")) {
+		        y = new BigInteger(1, Base64.decode(buf.toString()));
 		    }
+	            } catch (Base64DecodingException e) {
+		        e.printStackTrace();
+		    }
+		    buf = new StringBuffer();
+		}
+		break;
+	    case XMLStreamReader.CHARACTERS:
+		if (startDSA || startRSA) {
+		    buf = buf.append(reader.getText());
 		}
 		break;
 	}
@@ -762,7 +788,6 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 				if (!ref.validate(ctx))
 					return false;
 			}
-			SignatureAlgorithm sa=new SignatureAlgorithm(si.signatureMethod);
 			// get key from KeySelector
                         try {
                             ksr = ctx.getKeySelector().select(getKeyInfo(), 
@@ -772,12 +797,12 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
                         } catch (KeySelectorException kse) {
                             throw new XMLSignatureException(kse);
                         }
-			sa.initVerify(ksr.getKey());
-			sa.update(si.canonData);			
-			boolean isSignatureValid = sa.verify(sv.getValue());
+			boolean isSignatureValid = si.signatureMethod.verify
+			    (ksr.getKey(), si.canonData, sv.signatureValue, 
+			     validateContext);
 			sv.isValid = isSignatureValid;
 			return isSignatureValid;
-		} catch (org.apache.xml.security.signature.XMLSignatureException e) {
+		} catch (Exception e) {
 			throw new XMLSignatureException(e);
 		}
 	}
