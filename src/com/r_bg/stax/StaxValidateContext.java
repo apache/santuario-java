@@ -12,7 +12,7 @@ import javax.xml.stream.XMLStreamReader;
 public class StaxValidateContext implements XMLValidateContext {	
     private XMLStreamReader reader;
     private int signatureNumber = 0;
-    private StaxSignatureVerificator sig;
+    private StaxSignatureValidator sig;
     private KeySelector ks;
     private HashMap nsMap = new HashMap();
     private HashMap objMap = new HashMap();
@@ -34,7 +34,7 @@ public class StaxValidateContext implements XMLValidateContext {
 	}
 	setKeySelector(KeySelector.singletonKeySelector(key));
 	this.reader = reader;		
-	sig = new StaxSignatureVerificator();
+	sig = new StaxSignatureValidator();
     }
 
     public StaxValidateContext(KeySelector ks, XMLStreamReader reader) {
@@ -43,7 +43,7 @@ public class StaxValidateContext implements XMLValidateContext {
 	}
 	this.ks = ks;
 	this.reader = reader;		
-	sig = new StaxSignatureVerificator();
+	sig = new StaxSignatureValidator();
     }
 	
     public String getBaseURI() {

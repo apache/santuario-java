@@ -302,7 +302,7 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 	
 }
 class SignatureWatcher implements StaxWatcher {	
-	public StaxWorker watch(XMLStreamReader reader, StaxSignatureVerificator sig) {
+	public StaxWorker watch(XMLStreamReader reader, StaxSignatureValidator sig) {
 		String name=reader.getLocalName();
 		String uri=reader.getNamespaceURI();
 		if (name.equals("Signature") && 

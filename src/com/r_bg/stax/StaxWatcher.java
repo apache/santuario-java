@@ -9,5 +9,5 @@ public interface StaxWatcher {
 	 * @return a StreamFilter to be notified for the life of the element and all
 	 * subelements.
 	 */
-	public StaxWorker watch(XMLStreamReader reader, StaxSignatureVerificator sig);
+	public StaxWorker watch(XMLStreamReader reader, StaxSignatureValidator sig);
 }
