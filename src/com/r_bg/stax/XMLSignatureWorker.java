@@ -36,9 +36,9 @@ import javax.xml.crypto.dsig.keyinfo.X509IssuerSerial;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
+import com.r_bg.stax.transforms.StaxTransform;
+
 import org.apache.xml.security.algorithms.JCEMapper;
-import org.apache.xml.security.algorithms.MessageDigestAlgorithm;
-import org.apache.xml.security.algorithms.SignatureAlgorithm;
 import org.apache.xml.security.exceptions.Base64DecodingException;
 import org.apache.xml.security.utils.Base64;
 import org.apache.xml.security.utils.DigesterOutputStream;
@@ -46,45 +46,6 @@ import org.apache.xml.security.utils.DigesterOutputStream;
 class Constants {
 	public static final String DS_URI="http://www.w3.org/2000/09/xmldsig#";
 }
-
-
-class TransformWorker implements StaxWorker, Transform {
-    private String algorithm;
-    public StaxWorker read(XMLStreamReader reader) {
-	switch (reader.getEventType()) {
-	    case XMLStreamReader.START_ELEMENT: 
-		if (Constants.DS_URI.equals(reader.getNamespaceURI())) {
-		    String name=reader.getLocalName();
-		    if (name.equals("Transform") ) {
-			algorithm=reader.getAttributeValue(null,"Algorithm");
-		    }
-		}
-	    break;
-	}
-	return null;
-    }
-    public StaxWatcher remove() {
-	return null;
-    }
-    public String getAlgorithm() {
-	return algorithm;
-    }
-    public AlgorithmParameterSpec getParameterSpec() {
-	return null;
-    }
-    public boolean isFeatureSupported(String feature) {
-	return false;
-    }
-    public Data transform(Data data, XMLCryptoContext context) 
-	throws TransformException {
-	throw new UnsupportedOperationException();
-    }
-    public Data transform(Data data, XMLCryptoContext context, OutputStream os) 
-	throws TransformException {
-	throw new UnsupportedOperationException();
-    }
-}
-
 
 class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {	
 	boolean readDigestValue=false;
@@ -97,7 +58,7 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 	DigesterOutputStream os;
 	private String id;
 	private String type;
-	List<TransformWorker> transforms=new ArrayList<TransformWorker>();
+	List<Transform> transforms = new ArrayList<Transform>();
 	public StaxWorker read(XMLStreamReader reader) {
 		switch (reader.getEventType()) {
 		
@@ -124,7 +85,7 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 				readDigestValue=true;
 			  }			
 			  if (name.equals("Transform")) {
-				TransformWorker t=new TransformWorker();
+				StaxTransform t = new StaxTransform();
 				transforms.add(t);
 				return t;			
 			  }
@@ -151,8 +112,8 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 	}
 	public StaxWatcher remove() {		
 	    if (uri != null && uri.startsWith("#")) {
-		return new IdWatcher(uri.substring(1),this,os);
-//		return new IdWatcher(uri.substring(1),this,System.out);
+		return new IdWatcher(uri.substring(1), this, transforms, os);
+//		return new IdWatcher(uri.substring(1),this,transforms,System.out);
 	    } else {
 		return null;
 	    }
