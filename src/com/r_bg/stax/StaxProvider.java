@@ -33,6 +33,7 @@ import java.security.AccessController;
 import java.security.Provider;
 import java.util.HashMap;
 import java.util.Map;
+import javax.xml.crypto.dsig.Transform;
 
 /**
  * The XMLDSig RI Provider.
@@ -58,7 +59,12 @@ public final class StaxProvider extends Provider {
 	final Map map = new HashMap();
         map.put("XMLSignatureFactory.Stax", 
 	        "com.r_bg.stax.StaxXMLSignatureFactory");
-        	AccessController.doPrivileged(new java.security.PrivilegedAction() {
+        map.put((String) "TransformService." + Transform.BASE64, 
+	        "com.r_bg.stax.transforms.StaxBase64Transform");
+	map.put((String) "TransformService." + Transform.BASE64 +
+		" MechanismType", "Stax");
+	
+       	AccessController.doPrivileged(new java.security.PrivilegedAction() {
 	    public Object run() {
 		putAll(map);
 		return null;
