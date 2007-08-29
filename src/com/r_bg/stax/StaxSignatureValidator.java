@@ -4,6 +4,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.xml.crypto.dsig.Transform;
 import javax.xml.stream.StreamFilter;
 import javax.xml.stream.XMLStreamReader;
 
@@ -12,14 +13,22 @@ class IdWatcher implements StaxWatcher {
 	String uri;
 	DigestResultListener re;
 	OutputStream os;
-	public IdWatcher(String uri, DigestResultListener reader,OutputStream os) {
+	List<Transform> transforms;
+	public IdWatcher(String uri, DigestResultListener reader, 
+	    List<Transform> transforms, OutputStream os) {
 		this.uri=uri;
 		this.re=reader;
+		this.transforms=transforms;
 		this.os=os;
 	}
 	public StaxWorker watch(XMLStreamReader reader, StaxSignatureValidator sig) {
 		if (uri.equals(reader.getAttributeValue(null, "Id"))) {
-			return new C14nWorker(re,os);
+			if (!transforms.isEmpty()) {
+			    // only Base64 supported right now ...
+			    return new StaxBase64TransformWorker(re, os);
+			} else {
+			    return new C14nWorker(re,os);
+			}
 		}
 		return null;
 	}
