@@ -5,34 +5,66 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.xml.crypto.dsig.Transform;
+import javax.xml.crypto.dsig.TransformException;
 import javax.xml.stream.StreamFilter;
 import javax.xml.stream.XMLStreamReader;
 
+import com.r_bg.stax.transforms.StaxTransform;
 
 class IdWatcher implements StaxWatcher {
-	String uri;
+	String id;
 	DigestResultListener re;
 	OutputStream os;
 	List<Transform> transforms;
 	public IdWatcher(String uri, DigestResultListener reader, 
 	    List<Transform> transforms, OutputStream os) {
-		this.uri=uri;
+		if (uri.startsWith("xpointer(id(")) {
+                    int i1 = uri.indexOf('\'');
+                    int i2 = uri.indexOf('\'', i1+1);
+                    this.id = uri.substring(i1+1, i2);
+                } else {
+		    this.id=uri;
+		}
 		this.re=reader;
 		this.transforms=transforms;
 		this.os=os;
 	}
 	public StaxWorker watch(XMLStreamReader reader, StaxSignatureValidator sig) {
-		if (uri.equals(reader.getAttributeValue(null, "Id"))) {
-			if (!transforms.isEmpty()) {
-			    // only Base64 supported right now ...
-			    return new StaxBase64TransformWorker(re, os);
-			} else {
-			    return new C14nWorker(re,os);
+		if (id.equals(reader.getAttributeValue(null, "Id"))) {
+			if (transforms.isEmpty()) {
+			    return new C14nWorker(re, os, false);
+			}
+			for (Transform t : transforms) {
+			    // Only one Transform supported right now
+			    return new TransformWorker(t, re, os);
 			}
 		}
 		return null;
 	}
-	
+
+	private static class TransformWorker implements StaxWorker {
+	    private Transform t;
+	    private DigestResultListener re;
+	    private OutputStream os;
+	    TransformWorker
+		(Transform t, DigestResultListener re, OutputStream os) {
+		this.t = t;
+		this.re = re;
+		this.os = os;
+	    }
+	    public StaxWorker read(XMLStreamReader reader) {
+	        try {
+	            t.transform(new StaxData(reader), null, os);
+	        } catch (TransformException te) {
+		    te.printStackTrace();
+	        }
+		return null;
+	    }
+	    public StaxWatcher remove() {
+		re.setResult(null);
+		return null;
+	    }
+	}
 }
 
 public class StaxSignatureValidator implements StreamFilter{
@@ -41,8 +73,8 @@ public class StaxSignatureValidator implements StreamFilter{
 	List<Integer> filterStart=new ArrayList<Integer>();
 	List<StaxWatcher> watchers=new ArrayList<StaxWatcher>();
 	int level=0;
-	public StaxSignatureValidator() {
-		watchers.add(new SignatureWatcher());
+	public StaxSignatureValidator(StaxValidateContext context) {
+		watchers.add(new SignatureWatcher(context));
 	}
 	public void addSignature(XMLSignatureWorker s) {
 		signatures.add(s);
