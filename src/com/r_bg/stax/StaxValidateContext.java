@@ -34,7 +34,7 @@ public class StaxValidateContext implements XMLValidateContext {
 	}
 	setKeySelector(KeySelector.singletonKeySelector(key));
 	this.reader = reader;		
-	sig = new StaxSignatureValidator();
+	sig = new StaxSignatureValidator(this);
     }
 
     public StaxValidateContext(KeySelector ks, XMLStreamReader reader) {
@@ -43,7 +43,7 @@ public class StaxValidateContext implements XMLValidateContext {
 	}
 	this.ks = ks;
 	this.reader = reader;		
-	sig = new StaxSignatureValidator();
+	sig = new StaxSignatureValidator(this);
     }
 	
     public String getBaseURI() {
