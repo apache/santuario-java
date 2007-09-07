@@ -44,11 +44,11 @@ public class StaxTransform implements Transform, StaxWorker {
                 if (XMLSignature.XMLNS.equals(reader.getNamespaceURI()) &&
 		    reader.getLocalName().equals("Transform")) {
                     String alg = reader.getAttributeValue(null,"Algorithm");
-		    try {
-        	        spi = TransformService.getInstance
-			    (alg, "Stax", new StaxProvider());
-		    } catch (NoSuchAlgorithmException e) {
-		        e.printStackTrace();
+	            try {
+			spi = TransformService.getInstance
+		            (alg, "Stax", new StaxProvider());
+	            } catch (NoSuchAlgorithmException e) {
+	                e.printStackTrace();
                     }
                 }
                 break;
@@ -116,30 +116,6 @@ public class StaxTransform implements Transform, StaxWorker {
     public Data transform(Data data, XMLCryptoContext xc, OutputStream os) 
 	throws TransformException {
 	return spi.transform(data, xc, os);
-    }
-
-    public boolean equals(Object o) {
-	if (this == o) {
-            return true;
-	}
-
-        if (!(o instanceof Transform)) {
-            return false;
-	}
-        Transform otransform = (Transform) o;
-
-	return (getAlgorithm().equals(otransform.getAlgorithm()));
-/*
-	 && 
-	    DOMUtils.paramsEqual
-		(getParameterSpec(), otransform.getParameterSpec()));
-*/
-    }
-
-    public int hashCode() {
-	// uncomment when JDK 1.4 is required
-	// assert false : "hashCode not designed";
-	return 58;
     }
 
     public boolean isFeatureSupported(String feature) {
