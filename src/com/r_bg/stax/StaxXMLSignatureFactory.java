@@ -30,6 +30,10 @@ import javax.xml.crypto.dsig.spec.C14NMethodParameterSpec;
 import javax.xml.crypto.dsig.spec.DigestMethodParameterSpec;
 import javax.xml.crypto.dsig.spec.SignatureMethodParameterSpec;
 import javax.xml.crypto.dsig.spec.TransformParameterSpec;
+import javax.xml.stream.StreamFilter;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 
 import org.jcp.xml.dsig.internal.dom.XMLDSigRI;
 
@@ -152,17 +156,37 @@ public class StaxXMLSignatureFactory extends XMLSignatureFactory {
 		return null;
 	}
 
-	@Override
-	public XMLSignature unmarshalXMLSignature(XMLValidateContext context) throws MarshalException {
-		// TODO Auto-generated method stub
-		return ((StaxValidateContext)context).getSignature();
-	}
+    @Override
+    public XMLSignature unmarshalXMLSignature(XMLValidateContext context) 
+        throws MarshalException {
+        if (context == null) {
+            throw new NullPointerException();
+        }
+        if (!(context instanceof StaxValidateContext)) {
+            throw new ClassCastException();
+        }
+        StaxValidateContext svc = (StaxValidateContext) context;
+        XMLStreamReader reader = svc.getXMLStreamReader();
+        XMLInputFactory xif = XMLInputFactory.newInstance();
+        StreamFilter sf = svc.getStreamFilter();
+        try {
+            XMLStreamReader fsr = xif.createFilteredReader(reader, sf);
+              while ((fsr.getEventType()) != XMLStreamReader.END_DOCUMENT) {
+                  fsr.next();
+              }
+        } catch (XMLStreamException xse) {
+            throw new MarshalException(xse);
+        }
 
-	@Override
-	public XMLSignature unmarshalXMLSignature(XMLStructure xmlStructure) throws MarshalException {
-		// TODO Auto-generated method stub
-		return null;
-	}
+        return svc.getSignature();
+    }
+
+    @Override
+    public XMLSignature unmarshalXMLSignature(XMLStructure xmlStructure) 
+        throws MarshalException {
+        if (xmlStructure == null) throw new NullPointerException();
+        return null;
+    }
 
 	@Override
 	public boolean isFeatureSupported(String feature) {
