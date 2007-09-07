@@ -9,8 +9,8 @@ import com.r_bg.stax.c14n.C14n;
 public class C14nWorker implements StaxWorker {
 	DigestResultListener re;
 	C14n c14n;
-	public C14nWorker(DigestResultListener re,OutputStream os) {
-		c14n=new C14n(new com.r_bg.stax.c14n.AttributeHandleExclusive(),os);
+	public C14nWorker(DigestResultListener re, OutputStream os, boolean withComments) {
+		c14n=new C14n(new com.r_bg.stax.c14n.AttributeHandleExclusive(),os, withComments);
 		this.re=re;
 	}
 
