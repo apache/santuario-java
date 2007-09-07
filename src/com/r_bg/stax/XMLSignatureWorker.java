@@ -3,8 +3,14 @@ package com.r_bg.stax;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
+import java.io.IOException;
 import java.math.BigInteger;
+import java.net.URI;
+import java.net.URL;
+import java.net.URLConnection;
 import java.security.KeyException;
 import java.security.KeyFactory;
 import java.security.MessageDigest;
@@ -33,6 +39,7 @@ import javax.xml.crypto.dsig.keyinfo.KeyValue;
 import javax.xml.crypto.dsig.keyinfo.RetrievalMethod;
 import javax.xml.crypto.dsig.keyinfo.X509Data;
 import javax.xml.crypto.dsig.keyinfo.X509IssuerSerial;
+import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
@@ -59,6 +66,10 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 	private String id;
 	private String type;
 	List<Transform> transforms = new ArrayList<Transform>();
+	private String baseURI;
+	ReferenceWorker(String baseURI) {
+	    this.baseURI = baseURI;
+	}
 	public StaxWorker read(XMLStreamReader reader) {
 		switch (reader.getEventType()) {
 		
@@ -111,12 +122,77 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 		return null;
 	}
 	public StaxWatcher remove() {		
-	    if (uri != null && uri.startsWith("#")) {
-		return new IdWatcher(uri.substring(1), this, transforms, os);
-//		return new IdWatcher(uri.substring(1),this,transforms,System.out);
-	    } else {
-		return null;
-	    }
+	    if (uri != null) {
+		if (uri.startsWith("#")) {
+		    return new IdWatcher(uri.substring(1), this, transforms, os);
+//		    return new IdWatcher(uri.substring(1),this,transforms,System.out);
+		} else if (uri.isEmpty()) {
+		    System.out.println("enveloped");
+//		    return new EnvelopedIdWatcher(transforms, os);
+		} else if (uri.startsWith("http:") ||
+		    (baseURI != null && baseURI.startsWith("http:"))) {
+		    try {
+			URLConnection uc = null;
+		        if (baseURI != null) {
+		            uc = new URL(new URL(baseURI),uri).openConnection();
+			} else {
+		            uc = new URL(uri).openConnection();
+			}
+			InputStream is = uc.getInputStream();
+                        if (!transforms.isEmpty()) {
+                            // only Base64 supported right now ...
+			    try {
+                                Base64.decode(is, os);
+			    } catch (Base64DecodingException e) {
+				e.printStackTrace();
+			    }
+			} else {
+         		    byte buf[] = new byte[4096];
+         		    int read = 0;
+         		    while ((read = is.read(buf)) >= 0) {
+            		        os.write(buf, 0, read);
+         		    }
+			}
+			setResult(null);
+
+		    } catch (IOException e) {
+			e.printStackTrace();
+		    }
+		} else if (uri.startsWith("file:") ||
+		    (baseURI != null && baseURI.startsWith("file:"))) {
+		    try {
+		        URI fileURI = null;
+		        if (baseURI != null) {
+			    fileURI = new URI(baseURI).resolve(uri);
+		        } else {
+			    fileURI = new URI(uri);
+		        }
+		        FileInputStream fs = new FileInputStream(new File(fileURI));
+			XMLInputFactory xif = XMLInputFactory.newInstance();
+			XMLStreamReader re = xif.createXMLStreamReader(fs);
+			while (re.getEventType() != XMLStreamReader.END_DOCUMENT) {
+//			    System.out.println(re.getEventType());
+/*
+                        if (transforms.isEmpty()) {
+                            return new C14nWorker(re, os, false);
+                        }
+*/
+                            for (Transform t : transforms) {
+                                // Only one Transform supported right now
+                                t.transform(new StaxData(re), null, os);
+//                                t.transform(new StaxData(re), null, System.out);
+				break;
+			    }
+			    re.next();
+                        }
+
+			setResult(null);
+		    } catch (Exception e) {
+			e.printStackTrace();
+		    }
+		}
+	    } 
+	    return null;
 	}
 	/* (non-Javadoc)
 	 * @see com.r_bg.stax.DigestResultListener#setResult(byte[])
@@ -177,19 +253,23 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 	ByteArrayOutputStream bos=new ByteArrayOutputStream(); 
 	byte[] canonData;
 	boolean initial=true;
-	C14nWorker c14n=new C14nWorker(this,bos);
-//	C14nWorker c14n=new C14nWorker(this,System.out);
+	C14nWorker c14n=new C14nWorker(this, bos, false);
+//	C14nWorker c14n=new C14nWorker(this, System.out, false);
 	List<ReferenceWorker> references=new ArrayList<ReferenceWorker>();
 	StaxSignatureMethod signatureMethod;
 	String c14nMethod;
 	private String id;
+	private String baseURI;
+	SignedInfoWorker(String baseURI) {
+	    this.baseURI = baseURI;
+	}
 	public StaxWorker read(XMLStreamReader reader) {
 		if (reader.getEventType()==XMLStreamReader.START_ELEMENT && Constants.DS_URI.equals(reader.getNamespaceURI())) {
 			String name=reader.getLocalName();
 			if (name.equals("SignedInfo") ) {
 				id=reader.getAttributeValue(null,"Id");
 			} else if (name.equals("Reference") ) {
-				ReferenceWorker r=new ReferenceWorker();
+				ReferenceWorker r=new ReferenceWorker(baseURI);
 				references.add(r);
 				return r;			
 			} else if (name.equals("SignatureMethod")) {
@@ -263,18 +343,21 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 	
 }
 class SignatureWatcher implements StaxWatcher {	
-	public StaxWorker watch(XMLStreamReader reader, StaxSignatureValidator sig) {
-		String name=reader.getLocalName();
-		String uri=reader.getNamespaceURI();
-		if (name.equals("Signature") && 
-				uri.equals(Constants.DS_URI)) {			
-			XMLSignatureWorker s=new XMLSignatureWorker();
-			sig.addSignature(s);
-			return s;
-		}
-		
-		return null;
+    private StaxValidateContext context;
+    SignatureWatcher(StaxValidateContext context) {
+	this.context = context;
+    }
+    public StaxWorker watch(XMLStreamReader reader, StaxSignatureValidator sig) {
+	String name=reader.getLocalName();
+	String uri=reader.getNamespaceURI();
+	if (name.equals("Signature") && uri.equals(XMLSignature.XMLNS)) {
+	    XMLSignatureWorker s = new XMLSignatureWorker(context.getBaseURI());
+	    sig.addSignature(s);
+	    return s;
 	}
+		
+	return null;
+    }
 }
 
 class SignatureValueWorker implements StaxWorker,XMLSignature.SignatureValue {		
@@ -424,6 +507,8 @@ class KeyValueWorker implements StaxWorker, KeyValue {
 class X509DataWorker implements StaxWorker, X509Data {		
     private List content = new ArrayList();
     private CertificateFactory cf; 
+    private boolean readSN, readSki, readISName, readSerial, readCert, readCRL;
+    private String issuer;
 
     public StaxWorker read(XMLStreamReader reader) {
 	switch (reader.getEventType()) {
@@ -431,51 +516,80 @@ class X509DataWorker implements StaxWorker, X509Data {
 		if(Constants.DS_URI.equals(reader.getNamespaceURI())) {
 		    String name = reader.getLocalName();
 		    if (name.equals("X509SubjectName")) {
-			try {
-			    content.add(reader.getElementText());
-			} catch (XMLStreamException xse) {
-			    xse.printStackTrace();
-			}
+			readSN = true;
 		    } else if (name.equals("X509SKI")) {
-			try {
-			    byte[] ski = Base64.decode(reader.getElementText());
-			    content.add(ski);
-			} catch (Exception e) {
-			    e.printStackTrace();
-			}
+			readSki = true;
+		    } else if (name.equals("X509IssuerName")) {
+			readISName = true;
 		    } else if (name.equals("X509IssuerSerial")) {
-			content.add(new X509IssuerSerial() {
-			    public String getIssuerName() {
-				return null;
-			    }
-			    public BigInteger getSerialNumber() {
-				return null;
-			    }
-			    public boolean isFeatureSupported(String feature) {
-				return false;
-			    }
-			});
+			readSerial = true;
 		    } else if (name.equals("X509Certificate")) {
-			try {
-			    byte[] cert = Base64.decode(reader.getElementText());
-			    if (cf == null) {
-    				cf = CertificateFactory.getInstance("X.509");
-			    }
-			    content.add(cf.generateCertificate(new ByteArrayInputStream(cert)));
-			} catch (Exception e) {
-			    e.printStackTrace();
-			}
+			readCert = true;
 		    } else if (name.equals("X509CRL")) {
-			try {
-			    byte[] crl = Base64.decode(reader.getElementText());
-			    if (cf == null) {
-    				cf = CertificateFactory.getInstance("X.509");
-			    }
-			    content.add(cf.generateCRL(new ByteArrayInputStream(crl)));
-			} catch (Exception e) {
-			    e.printStackTrace();
-			}
+			readCRL = true;
 		    }
+		}
+		break;
+	    case XMLStreamReader.CHARACTERS:
+		String text = reader.getText();
+		if (readSN) {
+		    content.add(text);
+		    readSN = false;
+		} else if (readISName) {
+		    issuer = text;
+		    readISName = false;
+		} else if (readSerial) {
+		    byte[] bytes = null;
+		    try {
+			bytes = Base64.decode(text);
+		    } catch (Base64DecodingException e) {
+			e.printStackTrace();
+		    }
+		    final BigInteger serial = new BigInteger(1, bytes);
+	            content.add(new X509IssuerSerial() {
+		        public String getIssuerName() {
+		            return issuer;
+		        }
+		        public BigInteger getSerialNumber() {
+		            return serial;
+		        }
+		        public boolean isFeatureSupported(String feature) {
+		            return false;
+		        }
+		    });
+		    readSerial = false;
+		} else if (readSki) {
+		    try {
+		        byte[] ski = Base64.decode(text);
+		        content.add(ski);
+		    } catch (Base64DecodingException e) {
+		        e.printStackTrace();
+		    }
+		    readSki = false;
+		} else if (readCert) {
+		    try {
+		        byte[] cert = Base64.decode(text);
+		        if (cf == null) {
+    			    cf = CertificateFactory.getInstance("X.509");
+		        }
+		        content.add(cf.generateCertificate
+			    (new ByteArrayInputStream(cert)));
+		    } catch (Exception e) {
+		        e.printStackTrace();
+		    }
+		    readCert = false;
+		} else if (readCRL) {
+		    try {
+		        byte[] crl = Base64.decode(text);
+		        if (cf == null) {
+    			    cf = CertificateFactory.getInstance("X.509");
+		        }
+		        content.add
+			    (cf.generateCRL(new ByteArrayInputStream(crl)));
+		    } catch (Exception e) {
+		        e.printStackTrace();
+		    }
+		    readCRL = false;
 		}
 		break;
 	}
@@ -491,10 +605,52 @@ class X509DataWorker implements StaxWorker, X509Data {
 	return false;
     }
 }
+
+class RetrievalMethodWorker implements StaxWorker, RetrievalMethod {
+    private String uri, type;
+    private List<Transform> transforms = new ArrayList<Transform>();
+    public StaxWorker read(XMLStreamReader reader) {
+	switch (reader.getEventType()) {
+	    case XMLStreamReader.START_ELEMENT: 
+		if(Constants.DS_URI.equals(reader.getNamespaceURI())) {
+		    String name = reader.getLocalName();
+		    if (name.equals("RetrievalMethod") ) {
+			uri = reader.getAttributeValue(null, "URI");
+			type = reader.getAttributeValue(null, "Type");
+		    } else if (name.equals("Transform")) {
+			StaxTransform t = new StaxTransform();
+			transforms.add(t);
+			return t;
+		    }
+		}
+		break;
+	}
+        return null;
+    }
+    public StaxWatcher remove() {
+	return null;
+    }
+    public List getTransforms() {
+	return Collections.unmodifiableList(transforms);
+    }
+    public String getType() {
+	return type;
+    }
+    public String getURI() {
+	return uri;
+    }
+    public Data dereference(XMLCryptoContext context) {
+	throw new UnsupportedOperationException();
+    }
+    public boolean isFeatureSupported(String feature) {
+        return false;
+    }
+}
 			
 class KeyInfoWorker implements StaxWorker, KeyInfo {		
     private String id;
     private List content = new ArrayList();
+    private boolean readKeyName = false;
     public StaxWorker read(XMLStreamReader reader) {
 	switch (reader.getEventType()) {
 	    case XMLStreamReader.START_ELEMENT: 
@@ -503,48 +659,34 @@ class KeyInfoWorker implements StaxWorker, KeyInfo {
 		    if (name.equals("KeyInfo") ) {
 			id = reader.getAttributeValue(null, "Id");
 		    } else if (name.equals("KeyName") ) {
-			try {
-			    final String keyName = reader.getElementText();
-			    content.add(new KeyName() {
-			        public String getName() {
-				    return keyName;
-			        }
-			        public boolean isFeatureSupported(String feature) {
-				    return false;
-			        }
-			    });
-			} catch (XMLStreamException xse) {
-			    xse.printStackTrace();
-			}
+			readKeyName = true;
 		    } else if (name.equals("KeyValue") ) {
 			KeyValueWorker kv = new KeyValueWorker();
 			content.add(kv);
 			return kv;
 		    } else if (name.equals("RetrievalMethod") ) {
-			final String uri = reader.getAttributeValue(null, "URI");
-			final String type = reader.getAttributeValue(null, "Type");
-			content.add(new RetrievalMethod() {
-			    public List getTransforms() {
-				return null;
-			    }
-			    public String getType() {
-				return type;
-			    }
-			    public String getURI() {
-				return uri;
-			    }
-			    public Data dereference(XMLCryptoContext context) {
-				throw new UnsupportedOperationException();
-			    }
-		            public boolean isFeatureSupported(String feature) {
-			        return false;
-		            }
-			});
+			RetrievalMethodWorker rm = new RetrievalMethodWorker();
+			content.add(rm);
+			return rm;
 		    } else if (name.equals("X509Data") ) {
 			X509DataWorker xd = new X509DataWorker();
 			content.add(xd);
 			return xd;
 		    }
+		}
+		break;
+	    case XMLStreamReader.CHARACTERS:
+		if (readKeyName) {
+		    final String keyName = reader.getText();
+		    content.add(new KeyName() {
+		        public String getName() {
+			    return keyName;
+		        }
+		        public boolean isFeatureSupported(String feature) {
+			    return false;
+		        }
+		    });
+		    readKeyName = false;
 		}
 		break;
 	}
@@ -619,7 +761,10 @@ class SignaturePropertiesWorker implements StaxWorker, SignatureProperties {
 class ManifestWorker implements StaxWorker, Manifest {		
     private String id;
     private List<Reference> refs = new ArrayList<Reference>();
-
+    private String baseURI;
+    ManifestWorker(String baseURI) {
+	this.baseURI = baseURI;
+    }
     public StaxWorker read(XMLStreamReader reader) {
 	switch (reader.getEventType()) {
 	    case XMLStreamReader.START_ELEMENT: 
@@ -628,7 +773,7 @@ class ManifestWorker implements StaxWorker, Manifest {
 		    if (name.equals("Manifest") ) {
 			id = reader.getAttributeValue(null, "Id");
 		    } else if (name.equals("Reference")) {
-			ReferenceWorker rw = new ReferenceWorker();
+			ReferenceWorker rw = new ReferenceWorker(baseURI);
 			refs.add(rw);
 			return rw;
 		    }
@@ -656,7 +801,10 @@ class XMLObjectWorker implements StaxWorker, XMLObject {
     private String mimeType;
     private String encoding;
     private List<XMLStructure> content = new ArrayList<XMLStructure>();
-
+    private String baseURI;
+    XMLObjectWorker(String baseURI) {
+	this.baseURI = baseURI;
+    }
     public StaxWorker read(XMLStreamReader reader) {
 	switch (reader.getEventType()) {
 	    case XMLStreamReader.START_ELEMENT: 
@@ -667,7 +815,7 @@ class XMLObjectWorker implements StaxWorker, XMLObject {
 			mimeType = reader.getAttributeValue(null, "MimeType");
 			encoding = reader.getAttributeValue(null, "Encoding");
 		    } else if (name.equals("Manifest")) {
-			ManifestWorker mw = new ManifestWorker();
+			ManifestWorker mw = new ManifestWorker(baseURI);
 			content.add(mw);
 			return mw;
 		    } else if (name.equals("SignatureProperties")) {
@@ -711,6 +859,10 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 	private String id;
 	private List<XMLObject> xmlObjects = new ArrayList<XMLObject>();
 	private KeySelectorResult ksr;
+	private String baseURI;
+	XMLSignatureWorker(String baseURI) {
+	    this.baseURI = baseURI;
+	}
 	public StaxWorker read(XMLStreamReader reader) {
 		switch (reader.getEventType()) {
 		  case XMLStreamReader.START_ELEMENT:
@@ -719,13 +871,13 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 				if (name.equals("Signature") ) {
 					id=reader.getAttributeValue(null,"Id");
 				} else if (name.equals("SignedInfo") ) {
-					si=new SignedInfoWorker();
+					si=new SignedInfoWorker(baseURI);
 					return si;			
 				} else if (name.equals("SignatureValue")) {
 					sv=new SignatureValueWorker();
 					return sv;
 				} else if (name.equals("Object")) {
-					XMLObjectWorker xo=new XMLObjectWorker();
+					XMLObjectWorker xo=new XMLObjectWorker(baseURI);
 					xmlObjects.add(xo);
 					return xo;
 				} else if (name.equals("KeyInfo")) {
@@ -745,10 +897,6 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 		if (validateContext == null) throw new NullPointerException();
 		StaxValidateContext ctx=(StaxValidateContext) validateContext;
 		try {
-			for (Reference ref: si.references) {
-				if (!ref.validate(ctx))
-					return false;
-			}
 			// get key from KeySelector
                         try {
                             ksr = ctx.getKeySelector().select(getKeyInfo(), 
@@ -762,7 +910,12 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 			    (ksr.getKey(), si.canonData, sv.signatureValue, 
 			     validateContext);
 			sv.isValid = isSignatureValid;
-			return isSignatureValid;
+			if (!isSignatureValid) return false;
+			for (Reference ref: si.references) {
+				if (!ref.validate(ctx))
+					return false;
+			}
+			return true;
 		} catch (Exception e) {
 			throw new XMLSignatureException(e);
 		}
