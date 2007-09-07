@@ -15,6 +15,8 @@ import javax.xml.stream.events.XMLEvent;
 public class C14n implements EventFilter,StreamFilter {
 	//String result="";
 	static final byte[] END_EL={'<','/'}; 
+        static final byte[] BEGIN_COMM = {'<','!','-','-'};
+	static final byte[] END_COMM = {'-','-','>'};
 	static void writePiData(XMLStreamReader in,OutputStream os) throws IOException {
 		os.write(in.getPITarget().getBytes());
 		String data=in.getPIData();
@@ -85,14 +87,16 @@ public class C14n implements EventFilter,StreamFilter {
 		return new String(os.toByteArray());
 	}
 
-	int beforeDocumentElement=-1;
+	int beforeDocumentElement=1;
 	int number=0;
 	C14nAttributeHandler handler;
 	StaxC14nHelper nsD=new StaxC14nHelper();
 	OutputStream os;
-	public C14n(C14nAttributeHandler handler, OutputStream os) {
+	private boolean withComments = false;
+	public C14n(C14nAttributeHandler handler, OutputStream os, boolean withComments) {
 		this.handler=handler;
 		this.os=os;
+		this.withComments = withComments;
 	}
 	public boolean accept(XMLEvent arg0) {
 		return false;
@@ -133,6 +137,19 @@ public class C14n implements EventFilter,StreamFilter {
 			case XMLStreamReader.CDATA:
 				os.write(in.getText().getBytes());
 				break;
+			case XMLStreamReader.COMMENT:
+				if (withComments) {
+				    if (beforeDocumentElement == -1) {
+					os.write('\n');
+				    }
+				    os.write(BEGIN_COMM);
+				    os.write(in.getText().getBytes());
+				    os.write(END_COMM);
+				    if (beforeDocumentElement == 1) {
+					os.write('\n');
+				    }
+				}
+				break;
 			
 		}
 		} catch (IOException ex) {
@@ -141,7 +158,3 @@ public class C14n implements EventFilter,StreamFilter {
 		return true;
 	}
 }
-	
-
-
-
