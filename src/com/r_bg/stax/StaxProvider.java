@@ -1,5 +1,5 @@
 /*
- * Copyright 2005 The Apache Software Foundation.
+ * Copyright 2007 The Apache Software Foundation.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -14,47 +14,28 @@
  *  limitations under the License.
  *
  */
-/*
- * ===========================================================================
- *
- * (C) Copyright IBM Corp. 2003 All Rights Reserved.
- *
- * ===========================================================================
- */
-/*
- * Portions copyright 2005 Sun Microsystems, Inc. All rights reserved.
- */
-/*
- * $Id: XMLDSigRI.java 375655 2006-02-07 18:35:54Z mullan $
- */
 package com.r_bg.stax;
 
 import java.security.AccessController;
 import java.security.Provider;
 import java.util.HashMap;
 import java.util.Map;
+import javax.xml.crypto.dsig.CanonicalizationMethod;
 import javax.xml.crypto.dsig.Transform;
 
 /**
- * The XMLDSig RI Provider.
- *
- * @author Joyce Leung
+ * The XMLDSig Stax provider.
  */
-
-/**
- * Defines the XMLDSigRI provider.
- */
-
 public final class StaxProvider extends Provider {
 
     static final long serialVersionUID = -5049765099299494554L;
 
     private static final String INFO = "XMLDSig " + 
-    "(Stax XMLSignatureFactory; Stax KeyInfoFactory)";
+    "(Stax XMLSignatureFactory; Stax Base64, Inclusive C14N, and Inclusive C14N WithComments TransformService)";
 
     public StaxProvider() {
-	/* We are the XMLDSig provider */
-	super("XMLDSig", 1.0, INFO);
+	/* We are the Stax provider */
+	super("XMLDSig Stax", 0.0, INFO);
 	
 	final Map map = new HashMap();
         map.put("XMLSignatureFactory.Stax", 
@@ -62,6 +43,16 @@ public final class StaxProvider extends Provider {
         map.put((String) "TransformService." + Transform.BASE64, 
 	        "com.r_bg.stax.transforms.StaxBase64Transform");
 	map.put((String) "TransformService." + Transform.BASE64 +
+		" MechanismType", "Stax");
+        map.put((String) "TransformService."+ CanonicalizationMethod.INCLUSIVE, 
+	        "com.r_bg.stax.transforms.StaxInclusiveC14N");
+	map.put((String) "TransformService."+ CanonicalizationMethod.INCLUSIVE +
+		" MechanismType", "Stax");
+        map.put((String) "TransformService." + 
+		CanonicalizationMethod.INCLUSIVE_WITH_COMMENTS, 
+	        "com.r_bg.stax.transforms.StaxInclusiveC14NWithComments");
+	map.put((String) "TransformService." + 
+		CanonicalizationMethod.INCLUSIVE_WITH_COMMENTS +
 		" MechanismType", "Stax");
 	
        	AccessController.doPrivileged(new java.security.PrivilegedAction() {
