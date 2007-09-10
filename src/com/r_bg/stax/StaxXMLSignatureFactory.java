@@ -194,10 +194,8 @@ public class StaxXMLSignatureFactory extends XMLSignatureFactory {
 		return false;
 	}
 
-	@Override
-	public URIDereferencer getURIDereferencer() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
+    @Override
+    public URIDereferencer getURIDereferencer() {
+	return StaxURIDereferencer.INSTANCE;
+    }
 }
