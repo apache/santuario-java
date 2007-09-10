@@ -17,6 +17,7 @@
 package com.r_bg.stax.transforms;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.spec.AlgorithmParameterSpec;
@@ -80,18 +81,30 @@ public class StaxBase64Transform extends TransformService {
 
     public Data transform(Data data, XMLCryptoContext context, OutputStream os)
 	throws TransformException {
-	XMLStreamReader reader = ((StaxData) data).getXMLStreamReader();
-        switch (reader.getEventType()) {
-            case XMLStreamReader.CHARACTERS:
-		String text = reader.getText();
-		try {
-	            Base64.decode(text, os);
-		} catch (Exception e) {
-		    throw new TransformException(e);
-		}
-	        break;
-        }
-	return null;
+	if (data instanceof StaxData) {
+	    XMLStreamReader reader = ((StaxData) data).getXMLStreamReader();
+            switch (reader.getEventType()) {
+                case XMLStreamReader.CHARACTERS:
+		    String text = reader.getText();
+		    try {
+	                Base64.decode(text, os);
+		    } catch (Exception e) {
+		        throw new TransformException(e);
+		    }
+	            break;
+            }
+	    return null;
+	} else if (data instanceof OctetStreamData) {
+	    InputStream is = ((OctetStreamData) data).getOctetStream();
+	    try {
+		Base64.decode(is, os);
+	    } catch (Exception e) {
+	        throw new TransformException(e);
+	    }
+	    return null;
+	} else {
+	    throw new TransformException("Unrecognized data type");
+	}
     }
 
     public AlgorithmParameterSpec getParameterSpec() {
