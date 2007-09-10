@@ -3,14 +3,8 @@ package com.r_bg.stax;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStream;
-import java.io.IOException;
 import java.math.BigInteger;
-import java.net.URI;
-import java.net.URL;
-import java.net.URLConnection;
 import java.security.KeyException;
 import java.security.KeyFactory;
 import java.security.MessageDigest;
@@ -30,6 +24,8 @@ import javax.xml.crypto.KeySelector;
 import javax.xml.crypto.KeySelectorException;
 import javax.xml.crypto.KeySelectorResult;
 import javax.xml.crypto.MarshalException;
+import javax.xml.crypto.OctetStreamData;
+import javax.xml.crypto.URIDereferencer;
 import javax.xml.crypto.XMLCryptoContext;
 import javax.xml.crypto.XMLStructure;
 import javax.xml.crypto.dsig.*;
@@ -39,7 +35,6 @@ import javax.xml.crypto.dsig.keyinfo.KeyValue;
 import javax.xml.crypto.dsig.keyinfo.RetrievalMethod;
 import javax.xml.crypto.dsig.keyinfo.X509Data;
 import javax.xml.crypto.dsig.keyinfo.X509IssuerSerial;
-import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
@@ -66,9 +61,9 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 	private String id;
 	private String type;
 	List<Transform> transforms = new ArrayList<Transform>();
-	private String baseURI;
-	ReferenceWorker(String baseURI) {
-	    this.baseURI = baseURI;
+	private XMLCryptoContext context;
+	ReferenceWorker(XMLCryptoContext context) {
+	    this.context = context;
 	}
 	public StaxWorker read(XMLStreamReader reader) {
 		switch (reader.getEventType()) {
@@ -122,78 +117,48 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 		return null;
 	}
 	public StaxWatcher remove() {		
+	    String baseURI = context.getBaseURI();
 	    if (uri != null) {
 		if (uri.startsWith("#")) {
 		    return new IdWatcher(uri.substring(1), this, transforms, os);
 //		    return new IdWatcher(uri.substring(1),this,transforms,System.out);
-		} else if (uri.isEmpty()) {
-		    System.out.println("enveloped");
-//		    return new EnvelopedIdWatcher(transforms, os);
-		} else if (uri.startsWith("http:") ||
-		    (baseURI != null && baseURI.startsWith("http:"))) {
+		} else {
+		    URIDereferencer ud = StaxURIDereferencer.INSTANCE;
 		    try {
-			URLConnection uc = null;
-		        if (baseURI != null) {
-		            uc = new URL(new URL(baseURI),uri).openConnection();
-			} else {
-		            uc = new URL(uri).openConnection();
-			}
-			InputStream is = uc.getInputStream();
-                        if (!transforms.isEmpty()) {
-                            // only Base64 supported right now ...
-			    try {
-                                Base64.decode(is, os);
-			    } catch (Base64DecodingException e) {
-				e.printStackTrace();
+		        Data data = ud.dereference(this, context);
+                       	for (Transform t : transforms) {
+                       	    // Only one Transform supported right now
+			    if (data instanceof StaxData) {
+			        XMLStreamReader re = 
+				    ((StaxData) data).getXMLStreamReader();
+			        while (re.getEventType() 
+				    != XMLStreamReader.END_DOCUMENT) {
+                       	    	    t.transform(data, null, os);
+				    re.next();
+				}
+			    } else {
+               	    	        data = t.transform(data, null, os);
 			    }
-			} else {
-         		    byte buf[] = new byte[4096];
+		            break;
+		        }
+			if (data instanceof OctetStreamData) {
+			    InputStream is = 
+				((OctetStreamData) data).getOctetStream();
+         		    byte buf[] = new byte[1024];
          		    int read = 0;
          		    while ((read = is.read(buf)) >= 0) {
             		        os.write(buf, 0, read);
          		    }
 			}
-			setResult(null);
-
-		    } catch (IOException e) {
-			e.printStackTrace();
-		    }
-		} else if (uri.startsWith("file:") ||
-		    (baseURI != null && baseURI.startsWith("file:"))) {
-		    try {
-		        URI fileURI = null;
-		        if (baseURI != null) {
-			    fileURI = new URI(baseURI).resolve(uri);
-		        } else {
-			    fileURI = new URI(uri);
-		        }
-		        FileInputStream fs = new FileInputStream(new File(fileURI));
-			XMLInputFactory xif = XMLInputFactory.newInstance();
-			XMLStreamReader re = xif.createXMLStreamReader(fs);
-			while (re.getEventType() != XMLStreamReader.END_DOCUMENT) {
-//			    System.out.println(re.getEventType());
-/*
-                        if (transforms.isEmpty()) {
-                            return new C14nWorker(re, os, false);
-                        }
-*/
-                            for (Transform t : transforms) {
-                                // Only one Transform supported right now
-                                t.transform(new StaxData(re), null, os);
-//                                t.transform(new StaxData(re), null, System.out);
-				break;
-			    }
-			    re.next();
-                        }
-
-			setResult(null);
 		    } catch (Exception e) {
 			e.printStackTrace();
 		    }
 		}
-	    } 
+		setResult(null);
+	    }
 	    return null;
 	}
+
 	/* (non-Javadoc)
 	 * @see com.r_bg.stax.DigestResultListener#setResult(byte[])
 	 */
@@ -259,9 +224,9 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 	StaxSignatureMethod signatureMethod;
 	String c14nMethod;
 	private String id;
-	private String baseURI;
-	SignedInfoWorker(String baseURI) {
-	    this.baseURI = baseURI;
+	private XMLCryptoContext context;
+	SignedInfoWorker(XMLCryptoContext context) {
+	    this.context = context;
 	}
 	public StaxWorker read(XMLStreamReader reader) {
 		if (reader.getEventType()==XMLStreamReader.START_ELEMENT && Constants.DS_URI.equals(reader.getNamespaceURI())) {
@@ -269,7 +234,7 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 			if (name.equals("SignedInfo") ) {
 				id=reader.getAttributeValue(null,"Id");
 			} else if (name.equals("Reference") ) {
-				ReferenceWorker r=new ReferenceWorker(baseURI);
+				ReferenceWorker r=new ReferenceWorker(context);
 				references.add(r);
 				return r;			
 			} else if (name.equals("SignatureMethod")) {
@@ -351,7 +316,7 @@ class SignatureWatcher implements StaxWatcher {
 	String name=reader.getLocalName();
 	String uri=reader.getNamespaceURI();
 	if (name.equals("Signature") && uri.equals(XMLSignature.XMLNS)) {
-	    XMLSignatureWorker s = new XMLSignatureWorker(context.getBaseURI());
+	    XMLSignatureWorker s = new XMLSignatureWorker(context);
 	    sig.addSignature(s);
 	    return s;
 	}
@@ -761,9 +726,9 @@ class SignaturePropertiesWorker implements StaxWorker, SignatureProperties {
 class ManifestWorker implements StaxWorker, Manifest {		
     private String id;
     private List<Reference> refs = new ArrayList<Reference>();
-    private String baseURI;
-    ManifestWorker(String baseURI) {
-	this.baseURI = baseURI;
+    private XMLCryptoContext context;
+    ManifestWorker(XMLCryptoContext context) {
+	this.context = context;
     }
     public StaxWorker read(XMLStreamReader reader) {
 	switch (reader.getEventType()) {
@@ -773,7 +738,7 @@ class ManifestWorker implements StaxWorker, Manifest {
 		    if (name.equals("Manifest") ) {
 			id = reader.getAttributeValue(null, "Id");
 		    } else if (name.equals("Reference")) {
-			ReferenceWorker rw = new ReferenceWorker(baseURI);
+			ReferenceWorker rw = new ReferenceWorker(context);
 			refs.add(rw);
 			return rw;
 		    }
@@ -801,9 +766,9 @@ class XMLObjectWorker implements StaxWorker, XMLObject {
     private String mimeType;
     private String encoding;
     private List<XMLStructure> content = new ArrayList<XMLStructure>();
-    private String baseURI;
-    XMLObjectWorker(String baseURI) {
-	this.baseURI = baseURI;
+    private XMLCryptoContext context;
+    XMLObjectWorker(XMLCryptoContext context) {
+	this.context = context;
     }
     public StaxWorker read(XMLStreamReader reader) {
 	switch (reader.getEventType()) {
@@ -815,7 +780,7 @@ class XMLObjectWorker implements StaxWorker, XMLObject {
 			mimeType = reader.getAttributeValue(null, "MimeType");
 			encoding = reader.getAttributeValue(null, "Encoding");
 		    } else if (name.equals("Manifest")) {
-			ManifestWorker mw = new ManifestWorker(baseURI);
+			ManifestWorker mw = new ManifestWorker(context);
 			content.add(mw);
 			return mw;
 		    } else if (name.equals("SignatureProperties")) {
@@ -859,9 +824,9 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 	private String id;
 	private List<XMLObject> xmlObjects = new ArrayList<XMLObject>();
 	private KeySelectorResult ksr;
-	private String baseURI;
-	XMLSignatureWorker(String baseURI) {
-	    this.baseURI = baseURI;
+	private XMLCryptoContext context;
+	XMLSignatureWorker(XMLCryptoContext context) {
+	    this.context = context;
 	}
 	public StaxWorker read(XMLStreamReader reader) {
 		switch (reader.getEventType()) {
@@ -871,13 +836,13 @@ public class XMLSignatureWorker implements StaxWorker,XMLSignature {
 				if (name.equals("Signature") ) {
 					id=reader.getAttributeValue(null,"Id");
 				} else if (name.equals("SignedInfo") ) {
-					si=new SignedInfoWorker(baseURI);
+					si=new SignedInfoWorker(context);
 					return si;			
 				} else if (name.equals("SignatureValue")) {
 					sv=new SignatureValueWorker();
 					return sv;
 				} else if (name.equals("Object")) {
-					XMLObjectWorker xo=new XMLObjectWorker(baseURI);
+					XMLObjectWorker xo=new XMLObjectWorker(context);
 					xmlObjects.add(xo);
 					return xo;
 				} else if (name.equals("KeyInfo")) {
