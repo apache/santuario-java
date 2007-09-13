@@ -23,7 +23,7 @@ public class AttributeHandleExclusive implements C14nAttributeHandler {
 		for (int i=0;i<length;i++) {
 			args.add(new Integer(i));
 			String prefix=in.getAttributePrefix(i);
-			if (prefix!=null)
+			if (!prefix.isEmpty())
 				prefixes.add(prefix);
 		}		
 		prefixes.add(in.getPrefix()==null? "" : in.getPrefix());
