@@ -54,6 +54,16 @@ public final class StaxProvider extends Provider {
 	map.put((String) "TransformService." + 
 		CanonicalizationMethod.INCLUSIVE_WITH_COMMENTS +
 		" MechanismType", "Stax");
+        map.put((String) "TransformService."+ CanonicalizationMethod.EXCLUSIVE, 
+	        "com.r_bg.stax.transforms.StaxExclusiveC14N");
+	map.put((String) "TransformService."+ CanonicalizationMethod.EXCLUSIVE +
+		" MechanismType", "Stax");
+        map.put((String) "TransformService." + 
+		CanonicalizationMethod.EXCLUSIVE_WITH_COMMENTS, 
+	        "com.r_bg.stax.transforms.StaxExclusiveC14NWithComments");
+	map.put((String) "TransformService." + 
+		CanonicalizationMethod.EXCLUSIVE_WITH_COMMENTS +
+		" MechanismType", "Stax");
 	
        	AccessController.doPrivileged(new java.security.PrivilegedAction() {
 	    public Object run() {
