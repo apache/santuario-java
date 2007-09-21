@@ -1,5 +1,5 @@
 /*
- * Copyright 2005 The Apache Software Foundation.
+ * Copyright 2007 The Apache Software Foundation.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package com.r_bg.stax.transforms;
 
 import java.io.OutputStream;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.AlgorithmParameterSpec;
 import javax.xml.crypto.*;
@@ -26,6 +27,7 @@ import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 
 import com.r_bg.stax.StaxProvider;
+import com.r_bg.stax.StaxStructure;
 import com.r_bg.stax.StaxWatcher;
 import com.r_bg.stax.StaxWorker;
 
@@ -37,6 +39,7 @@ import com.r_bg.stax.StaxWorker;
 public class StaxTransform implements Transform, StaxWorker {
 
     private TransformService spi;
+    private boolean transformRead = false;
 
     public StaxWorker read(XMLStreamReader reader) {
         switch (reader.getEventType()) {
@@ -50,8 +53,22 @@ public class StaxTransform implements Transform, StaxWorker {
 	            } catch (NoSuchAlgorithmException e) {
 	                e.printStackTrace();
                     }
-                }
+                } else {
+		    if (!transformRead) {
+		        try {
+		            spi.init(new StaxStructure(reader), null);
+		        } catch (InvalidAlgorithmParameterException e) {
+			    e.printStackTrace();
+		        }
+		    }
+		}
                 break;
+            case XMLStreamReader.END_ELEMENT:
+                if (XMLSignature.XMLNS.equals(reader.getNamespaceURI()) &&
+		    reader.getLocalName().equals("Transform")) {
+			transformRead = true;
+		}
+		break;
         }
         return null;
     }

@@ -1,3 +1,20 @@
+/*
+ * Copyright 2007 The Apache Software Foundation.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License. 
+ *
+ */             
+
 package com.r_bg.stax;
 
 import java.io.ByteArrayInputStream;
@@ -38,6 +55,7 @@ import javax.xml.crypto.dsig.keyinfo.X509IssuerSerial;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
+import com.r_bg.stax.c14n.StaxCanonicalizationMethod;
 import com.r_bg.stax.transforms.StaxTransform;
 
 import org.apache.xml.security.algorithms.JCEMapper;
@@ -123,7 +141,12 @@ class ReferenceWorker implements StaxWorker, Reference, DigestResultListener {
 		    return new IdWatcher(uri.substring(1), this, transforms, os);
 //		    return new IdWatcher(uri.substring(1),this,transforms,System.out);
 		} else {
-		    URIDereferencer ud = StaxURIDereferencer.INSTANCE;
+        	    // use user-specified URIDereferencer if specified; 
+		    // otherwise use deflt
+		    URIDereferencer ud = context.getURIDereferencer();
+		    if (ud == null) {
+            	        ud = StaxURIDereferencer.INSTANCE;
+		    } 
 		    try {
 		        Data data = ud.dereference(this, context);
                        	for (Transform t : transforms) {
@@ -222,7 +245,7 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 //	C14nWorker c14n=new C14nWorker(this, System.out, false);
 	List<ReferenceWorker> references=new ArrayList<ReferenceWorker>();
 	StaxSignatureMethod signatureMethod;
-	String c14nMethod;
+	StaxCanonicalizationMethod c14nMethod;
 	private String id;
 	private XMLCryptoContext context;
 	SignedInfoWorker(XMLCryptoContext context) {
@@ -245,8 +268,8 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 				    me.printStackTrace();
 				}
 			} else if (name.equals("CanonicalizationMethod")) {
-				//TODO: Change c14n.
-				c14nMethod=reader.getAttributeValue(null,"Algorithm");
+				c14nMethod = new StaxCanonicalizationMethod();
+				return c14nMethod;
 			}
 		}
 		if (initial) {
@@ -263,23 +286,7 @@ class SignedInfoWorker implements StaxWorker, SignedInfo, DigestResultListener {
 	}
 
 	public CanonicalizationMethod getCanonicalizationMethod() {
-		return new CanonicalizationMethod() {
-			public AlgorithmParameterSpec getParameterSpec() {
-				return null;
-			}
-			public String getAlgorithm() {
-				return c14nMethod;
-			}
-			public boolean isFeatureSupported(String feature) {
-				return false;
-			}
-			public Data transform(Data data, XMLCryptoContext context) throws TransformException {
-				throw new UnsupportedOperationException();
-			}
-			public Data transform(Data data, XMLCryptoContext context, OutputStream os) throws TransformException {
-				throw new UnsupportedOperationException();
-			}
-		};
+		return c14nMethod;
 	}
 
 	public SignatureMethod getSignatureMethod() {
