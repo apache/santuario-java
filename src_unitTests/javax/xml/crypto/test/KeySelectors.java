@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2009 The Apache Software Foundation.
+ * Copyright 2006-2010 The Apache Software Foundation.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -156,26 +156,10 @@ public class KeySelectors {
 		    } catch (KeyException ke) {
 			throw new KeySelectorException(ke);
 		    }
-		    // make sure algorithm is compatible with method
-		    if (algEquals(sm.getAlgorithm(), pk.getAlgorithm())) {
-			return new SimpleKSResult(pk);
-		    } 
+		    return new SimpleKSResult(pk);
 		}
 	    }
 	    throw new KeySelectorException("No KeyValue element found!");
-	}
-	
-	//@@@FIXME: this should also work for key types other than DSA/RSA
-	static boolean algEquals(String algURI, String algName) {
-	    if (algName.equalsIgnoreCase("DSA") && 
-		algURI.equalsIgnoreCase(SignatureMethod.DSA_SHA1)) {
-		return true;
-	    } else if (algName.equalsIgnoreCase("RSA") &&
-		       algURI.equalsIgnoreCase(SignatureMethod.RSA_SHA1)) {
-		return true;
-	    } else {
-		return false;
-	    }
 	}
     }
 

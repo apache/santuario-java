@@ -275,6 +275,7 @@
         <javac target="1.4" source="1.4" srcdir="${dir.src}"
                destdir="${dir.build.bin}"
                debug="${build.compile.debug}">
+            <compilerarg value="-XDignore.symbol.file" />
             <classpath refid="id.classpath" />
             <include name="**/org/apache/xml/security/**/*.java" />
             <include name="**/javax/xml/crypto/**/*.java" />
@@ -378,12 +379,17 @@
 	</target>
 
     <!-- Test JSR 105/XML DSig API -->
-    <target name="test_jsr105" depends="build.test"
+    <target name="test_jsr105" depends="build.jar"
 	    description="Runs JSR 105 interop and unit tests">
         <delete dir="${dir.build.junit.xml}"/>
         <delete dir="${dir.build.junit.html}"/>
         <mkdir dir="${dir.build.junit.xml}"/>
         <mkdir dir="${dir.build.junit.html}"/>
+        <copy file="${lib.xalan.1}" todir="${dir.build.libs2}"/>
+        <copy file="${lib.xalan.2}" todir="${dir.build.libs2}"/>
+        <copy file="${lib.xalan.3}" todir="${dir.build.libs2}"/>
+        <copy file="${lib.xerces.1}" todir="${dir.build.libs2}"/>
+        <copy file="${jar.library}" todir="${dir.build.libs2}"/>
         <junit filtertrace="true" fork="true" printsummary="on" 
 	       failureproperty="build.test.failed">
             <sysproperty key="basedir" value="${basedir}"/>
@@ -398,6 +404,10 @@
 	    <batchtest fork="yes" todir="${dir.build.junit.xml}">
 	        <fileset dir="${dir.src.test}">
 	            <include name="javax/xml/crypto/**/*Test.java"/>
+<!--
+	            <include name="javax/xml/crypto/**/InteropXMLDSig11Test.java"/>
+	            <include name="javax/xml/crypto/**/CreateInteropXMLDSig11Test.java"/>
+-->
                 <exclude name="javax/xml/crypto/test/dsig/InteropC14nTest.java"/>
             </fileset>
             </batchtest>
