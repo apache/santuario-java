@@ -1,5 +1,5 @@
 /*
- * Copyright  1999-2004 The Apache Software Foundation.
+ * Copyright 1999-2010 The Apache Software Foundation.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -66,7 +66,7 @@ public abstract class SignatureECDSA extends SignatureAlgorithmSpi {
     * @see <A HREF="http://www.w3.org/TR/xmldsig-core/#dsa-sha1">6.4.1 DSA</A>
     * @see <A HREF="ftp://ftp.rfc-editor.org/in-notes/rfc4050.txt">3.3. ECDSA Signatures</A>
     */
-   private static byte[] convertASN1toXMLDSIG(byte asn1Bytes[])
+   public static byte[] convertASN1toXMLDSIG(byte asn1Bytes[])
            throws IOException {
 
       byte rLength = asn1Bytes[3];
@@ -115,7 +115,7 @@ public abstract class SignatureECDSA extends SignatureAlgorithmSpi {
     * @see <A HREF="http://www.w3.org/TR/xmldsig-core/#dsa-sha1">6.4.1 DSA</A>
     * @see <A HREF="ftp://ftp.rfc-editor.org/in-notes/rfc4050.txt">3.3. ECDSA Signatures</A>
     */
-   private static byte[] convertXMLDSIGtoASN1(byte xmldsigBytes[])
+   public static byte[] convertXMLDSIGtoASN1(byte xmldsigBytes[])
            throws IOException {
 
       if (xmldsigBytes.length < 48) {
