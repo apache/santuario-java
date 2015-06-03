@@ -21,6 +21,7 @@ package org.apache.xml.security.test.dom.encryption;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.InputStream;
 import java.security.Key;
 import java.security.KeyPairGenerator;
 import java.security.KeyPair;
@@ -863,6 +864,27 @@ public class XMLCipherTest extends org.junit.Assert {
                 keyCipher.loadEncryptedKey(document, (Element) ekList.item(i));
             assertNotNull(ek.getRecipient());
         }
+    }
+
+    @org.junit.Test
+    public void testEecryptToByteArray() throws Exception {
+        KeyGenerator keygen = KeyGenerator.getInstance("AES");
+        keygen.init(128);
+        Key key = keygen.generateKey();
+
+        Document document = document();
+
+        XMLCipher cipher = XMLCipher.getInstance(XMLCipher.AES_128_GCM);
+        cipher.init(XMLCipher.ENCRYPT_MODE, key);
+        EncryptedData builder = cipher.getEncryptedData();
+
+        Document encrypted = cipher.doFinal(document, document);
+
+        XMLCipher xmlCipher = XMLCipher.getInstance();
+        xmlCipher.init(XMLCipher.DECRYPT_MODE, key);
+        Element encryptedData = (Element) document.getElementsByTagNameNS(EncryptionConstants.EncryptionSpecNS, EncryptionConstants._TAG_ENCRYPTEDDATA).item(0);
+
+        xmlCipher.decryptToByteArray(encryptedData);
     }
 
     private String toString (Node n) throws Exception {
