@@ -18,6 +18,11 @@
  */
 package org.apache.xml.security.stax.impl.processor.input;
 
+import java.util.ArrayDeque;
+import java.util.List;
+import javax.xml.stream.XMLStreamConstants;
+import javax.xml.stream.XMLStreamException;
+
 import org.apache.xml.security.exceptions.XMLSecurityException;
 import org.apache.xml.security.stax.ext.AbstractInputProcessor;
 import org.apache.xml.security.stax.ext.InputProcessorChain;
@@ -26,10 +31,6 @@ import org.apache.xml.security.stax.ext.XMLSecurityProperties;
 import org.apache.xml.security.stax.ext.stax.XMLSecEndElement;
 import org.apache.xml.security.stax.ext.stax.XMLSecEvent;
 import org.apache.xml.security.stax.ext.stax.XMLSecStartElement;
-
-import javax.xml.stream.XMLStreamConstants;
-import javax.xml.stream.XMLStreamException;
-import java.util.ArrayDeque;
 
 /**
  * Processor for XML Security.
@@ -168,11 +169,15 @@ public class XMLSecurityInputProcessor extends AbstractInputProcessor {
     public class InternalBufferProcessor extends AbstractInputProcessor {
 
         private final ArrayDeque<XMLSecEvent> xmlSecEventList = new ArrayDeque<XMLSecEvent>();
+        private final boolean encryptionOnly;
 
         InternalBufferProcessor(XMLSecurityProperties securityProperties) {
             super(securityProperties);
             setPhase(XMLSecurityConstants.Phase.POSTPROCESSING);
             addBeforeProcessor(XMLSecurityInputProcessor.class.getName());
+            List<XMLSecurityConstants.Action> actions = securityProperties.getActions();
+            encryptionOnly = actions != null && actions.contains(XMLSecurityConstants.ENCRYPT) &&
+                !actions.contains(XMLSecurityConstants.SIGNATURE);
         }
 
         public ArrayDeque<XMLSecEvent> getXmlSecEventList() {
@@ -189,8 +194,21 @@ public class XMLSecurityInputProcessor extends AbstractInputProcessor {
         public XMLSecEvent processNextEvent(InputProcessorChain inputProcessorChain)
                 throws XMLStreamException, XMLSecurityException {
             XMLSecEvent xmlSecEvent = inputProcessorChain.processEvent();
-            xmlSecEventList.push(xmlSecEvent);
+            if (! skipBufferEvent(xmlSecEvent)) {
+                xmlSecEventList.push(xmlSecEvent);
+            }
             return xmlSecEvent;
+        }
+
+        /**
+         * Shall we skip buffering this xmlSecEvent ?
+         *
+         * @param xmlSecEvent event to examine
+         * @return
+         */
+        private boolean skipBufferEvent(XMLSecEvent xmlSecEvent)
+        {
+            return encryptionOnly && encryptedDataElementFound && xmlSecEvent.isCharacters();
         }
     }
 
