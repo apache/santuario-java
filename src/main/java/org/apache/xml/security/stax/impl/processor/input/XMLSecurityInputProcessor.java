@@ -194,21 +194,10 @@ public class XMLSecurityInputProcessor extends AbstractInputProcessor {
         public XMLSecEvent processNextEvent(InputProcessorChain inputProcessorChain)
                 throws XMLStreamException, XMLSecurityException {
             XMLSecEvent xmlSecEvent = inputProcessorChain.processEvent();
-            if (! skipBufferEvent(xmlSecEvent)) {
+            if (! encryptionOnly) {
                 xmlSecEventList.push(xmlSecEvent);
             }
             return xmlSecEvent;
-        }
-
-        /**
-         * Shall we skip buffering this xmlSecEvent ?
-         *
-         * @param xmlSecEvent event to examine
-         * @return
-         */
-        private boolean skipBufferEvent(XMLSecEvent xmlSecEvent)
-        {
-            return encryptionOnly && encryptedDataElementFound && xmlSecEvent.isCharacters();
         }
     }
 
