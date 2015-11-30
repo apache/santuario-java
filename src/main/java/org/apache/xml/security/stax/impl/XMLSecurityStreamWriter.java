@@ -95,69 +95,22 @@ public class XMLSecurityStreamWriter implements XMLStreamWriter {
         }
     }
 
+    private String getNamespacePrefix(String namespaceURI) {
+        if (elementStack == null) {
+            return namespaceContext.getPrefix(namespaceURI);
+        } else {
+            return elementStack.getNamespaceContext().getPrefix(namespaceURI);
+        }
+    }
+
     @Override
     public void writeStartElement(String localName) throws XMLStreamException {
-        outputOpenStartElement();
-
-        Element element;
-        if (elementStack == null) {
-            element = new Element(elementStack, namespaceContext,
-                    XMLConstants.NULL_NS_URI, localName, XMLConstants.DEFAULT_NS_PREFIX);
-            if (signEntireRequestPart != null) {
-                signEntireRequestPart.setName(new QName("", localName));
-                outputProcessorChain.getSecurityContext().putAsMap(
-                    XMLSecurityConstants.SIGNATURE_PARTS,
-                    signEntireRequestPart.getName(),
-                    signEntireRequestPart
-                );
-            }
-            if (encryptEntireRequestPart != null) {
-                encryptEntireRequestPart.setName(new QName("", localName));
-                outputProcessorChain.getSecurityContext().putAsMap(
-                    XMLSecurityConstants.ENCRYPTION_PARTS,
-                    encryptEntireRequestPart.getName(),
-                    encryptEntireRequestPart
-                );
-            }
-        } else {
-            element = new Element(elementStack, XMLConstants.NULL_NS_URI, localName, XMLConstants.DEFAULT_NS_PREFIX);
-        }
-
-        elementStack = element;
-        openStartElement = element;
+        writeStartElement(XMLConstants.DEFAULT_NS_PREFIX, localName, XMLConstants.NULL_NS_URI);
     }
 
     @Override
     public void writeStartElement(String namespaceURI, String localName) throws XMLStreamException {
-        outputOpenStartElement();
-
-        Element element;
-        if (elementStack == null) {
-            element = new Element(elementStack, namespaceContext,
-                    namespaceURI, localName, namespaceContext.getPrefix(namespaceURI));
-            if (signEntireRequestPart != null) {
-                signEntireRequestPart.setName(new QName(namespaceURI, localName));
-                outputProcessorChain.getSecurityContext().putAsMap(
-                    XMLSecurityConstants.SIGNATURE_PARTS,
-                    signEntireRequestPart.getName(),
-                    signEntireRequestPart
-                );
-            }
-            if (encryptEntireRequestPart != null) {
-                encryptEntireRequestPart.setName(new QName(namespaceURI, localName));
-                outputProcessorChain.getSecurityContext().putAsMap(
-                    XMLSecurityConstants.ENCRYPTION_PARTS,
-                    encryptEntireRequestPart.getName(),
-                    encryptEntireRequestPart
-                );
-            }
-        } else {
-            element = new Element(elementStack,
-                    namespaceURI, localName, elementStack.getNamespaceContext().getPrefix(namespaceURI));
-        }
-
-        elementStack = element;
-        openStartElement = element;
+        writeStartElement(getNamespacePrefix(namespaceURI), localName, namespaceURI);
     }
 
     @Override
@@ -170,17 +123,17 @@ public class XMLSecurityStreamWriter implements XMLStreamWriter {
             if (signEntireRequestPart != null) {
                 signEntireRequestPart.setName(new QName(namespaceURI, localName, prefix));
                 outputProcessorChain.getSecurityContext().putAsMap(
-                    XMLSecurityConstants.SIGNATURE_PARTS,
-                    signEntireRequestPart.getName(),
-                    signEntireRequestPart
+                        XMLSecurityConstants.SIGNATURE_PARTS,
+                        signEntireRequestPart.getName(),
+                        signEntireRequestPart
                 );
             }
             if (encryptEntireRequestPart != null) {
                 encryptEntireRequestPart.setName(new QName(namespaceURI, localName, prefix));
                 outputProcessorChain.getSecurityContext().putAsMap(
-                    XMLSecurityConstants.ENCRYPTION_PARTS,
-                    encryptEntireRequestPart.getName(),
-                    encryptEntireRequestPart
+                        XMLSecurityConstants.ENCRYPTION_PARTS,
+                        encryptEntireRequestPart.getName(),
+                        encryptEntireRequestPart
                 );
             }
         } else {
@@ -192,22 +145,18 @@ public class XMLSecurityStreamWriter implements XMLStreamWriter {
     }
 
     @Override
+    public void writeEmptyElement(String localName) throws XMLStreamException {
+        writeEmptyElement(XMLConstants.DEFAULT_NS_PREFIX, localName, XMLConstants.NULL_NS_URI);
+    }
+
+    @Override
     public void writeEmptyElement(String namespaceURI, String localName) throws XMLStreamException {
-        writeStartElement(namespaceURI, localName);
-        openStartElement.setEmptyElement(true);
-        haveToWriteEndElement = true;
+        writeEmptyElement(getNamespacePrefix(namespaceURI), localName, namespaceURI);
     }
 
     @Override
     public void writeEmptyElement(String prefix, String localName, String namespaceURI) throws XMLStreamException {
         writeStartElement(prefix, localName, namespaceURI);
-        openStartElement.setEmptyElement(true);
-        haveToWriteEndElement = true;
-    }
-
-    @Override
-    public void writeEmptyElement(String localName) throws XMLStreamException {
-        writeStartElement(localName);
         openStartElement.setEmptyElement(true);
         haveToWriteEndElement = true;
     }
@@ -252,12 +201,12 @@ public class XMLSecurityStreamWriter implements XMLStreamWriter {
 
     @Override
     public void writeAttribute(String localName, String value) throws XMLStreamException {
-        if (openStartElement == null) {
-            throw new XMLStreamException("No open start element.");
-        }
-        openStartElement.addAttribute(
-                XMLSecEventFactory.createXMLSecAttribute(
-                        new QName(localName), value));
+        writeAttribute(XMLConstants.DEFAULT_NS_PREFIX, XMLConstants.NULL_NS_URI, localName, value);
+    }
+
+    @Override
+    public void writeAttribute(String namespaceURI, String localName, String value) throws XMLStreamException {
+        writeAttribute(getNamespacePrefix(namespaceURI), namespaceURI, localName, value);
     }
 
     @Override
@@ -269,16 +218,6 @@ public class XMLSecurityStreamWriter implements XMLStreamWriter {
         openStartElement.addAttribute(
                 XMLSecEventFactory.createXMLSecAttribute(
                         new QName(namespaceURI, localName, prefix), value));
-    }
-
-    @Override
-    public void writeAttribute(String namespaceURI, String localName, String value) throws XMLStreamException {
-        if (openStartElement == null) {
-            throw new XMLStreamException("No open start element.");
-        }
-        openStartElement.addAttribute(
-                XMLSecEventFactory.createXMLSecAttribute(
-                        new QName(namespaceURI, localName, getNamespaceContext().getPrefix(namespaceURI)), value));
     }
 
     @Override
@@ -294,13 +233,14 @@ public class XMLSecurityStreamWriter implements XMLStreamWriter {
         if (openStartElement == null) {
             throw new XMLStreamException("No open start element.");
         }
-        //workaround for sun's stax parser:
-        if (this.openStartElement.getElementPrefix() == null ||
-            this.openStartElement.getElementPrefix().equals(XMLConstants.DEFAULT_NS_PREFIX)) {
+
+        //workaround for sun's stax parser
+        if (this.openStartElement.getElementPrefix().equals(XMLConstants.DEFAULT_NS_PREFIX)) {
             this.openStartElement.setElementNamespace(namespaceURI);
             this.openStartElement.setElementPrefix(XMLConstants.DEFAULT_NS_PREFIX);
         }
-        this.openStartElement.addNamespace(XMLSecEventFactory.createXMLSecNamespace(XMLConstants.DEFAULT_NS_PREFIX, namespaceURI));
+        this.openStartElement.addNamespace(
+                XMLSecEventFactory.createXMLSecNamespace(XMLConstants.DEFAULT_NS_PREFIX, namespaceURI));
     }
 
     @Override
@@ -311,8 +251,7 @@ public class XMLSecurityStreamWriter implements XMLStreamWriter {
 
     @Override
     public void writeProcessingInstruction(String target) throws XMLStreamException {
-        outputOpenStartElement();
-        chainProcessEvent(XMLSecEventFactory.createXMLSecProcessingInstruction(target, XMLConstants.DEFAULT_NS_PREFIX));
+        writeProcessingInstruction(target, XMLConstants.DEFAULT_NS_PREFIX);
     }
 
     @Override
@@ -348,12 +287,12 @@ public class XMLSecurityStreamWriter implements XMLStreamWriter {
 
     @Override
     public void writeStartDocument() throws XMLStreamException {
-        chainProcessEvent(XMLSecEventFactory.createXmlSecStartDocument(null, null, null, null));
+        writeStartDocument(null, null);
     }
 
     @Override
     public void writeStartDocument(String version) throws XMLStreamException {
-        chainProcessEvent(XMLSecEventFactory.createXmlSecStartDocument(null, null, null, version));
+        writeStartDocument(null, version);
     }
 
     @Override
@@ -375,11 +314,7 @@ public class XMLSecurityStreamWriter implements XMLStreamWriter {
 
     @Override
     public String getPrefix(String uri) throws XMLStreamException {
-        if (elementStack == null) {
-            return this.namespaceContext.getPrefix(uri);
-        } else {
-            return this.elementStack.getNamespaceContext().getPrefix(uri);
-        }
+        return getNamespacePrefix(uri);
     }
 
     @Override
@@ -460,9 +395,9 @@ public class XMLSecurityStreamWriter implements XMLStreamWriter {
                        String elementNamespace, String elementName, String elementPrefix) {
             this.parentElement = parentElement;
             this.namespaceContext = namespaceContext;
-            this.elementNamespace = elementNamespace;
             this.elementName = elementName;
-            this.elementPrefix = elementPrefix;
+            setElementNamespace(elementNamespace);
+            setElementPrefix(elementPrefix);
         }
 
         private Element getParentElement() {
@@ -482,7 +417,11 @@ public class XMLSecurityStreamWriter implements XMLStreamWriter {
         }
 
         private void setElementNamespace(String elementNamespace) {
-            this.elementNamespace = elementNamespace;
+            if (elementNamespace == null) {
+                this.elementNamespace = XMLConstants.NULL_NS_URI;
+            } else {
+                this.elementNamespace = elementNamespace;
+            }
             this.qName = null;
         }
 
@@ -491,7 +430,11 @@ public class XMLSecurityStreamWriter implements XMLStreamWriter {
         }
 
         private void setElementPrefix(String elementPrefix) {
-            this.elementPrefix = elementPrefix;
+            if (elementPrefix == null) {
+                this.elementPrefix = XMLConstants.DEFAULT_NS_PREFIX;
+            } else {
+                this.elementPrefix = elementPrefix;
+            }
             this.qName = null;
         }
 
