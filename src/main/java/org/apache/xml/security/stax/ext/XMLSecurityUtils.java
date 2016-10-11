@@ -28,7 +28,6 @@ import org.apache.xml.security.stax.ext.stax.XMLSecAttribute;
 import org.apache.xml.security.stax.ext.stax.XMLSecEvent;
 import org.apache.xml.security.stax.ext.stax.XMLSecNamespace;
 import org.apache.xml.security.stax.ext.stax.XMLSecStartElement;
-import org.apache.xml.security.stax.impl.processor.output.XMLSignatureEndingOutputProcessor;
 import org.apache.xml.security.stax.impl.util.ConcreteLSInput;
 import org.apache.xml.security.stax.securityEvent.*;
 import org.apache.xml.security.stax.securityToken.InboundSecurityToken;
