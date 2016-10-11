@@ -1330,7 +1330,7 @@ public class SignatureCreationTest extends AbstractSignatureCreationTest {
 
         NodeList nodeList = document.getElementsByTagNameNS(XMLSecurityConstants.TAG_dsig_KeyName.getNamespaceURI(), XMLSecurityConstants.TAG_dsig_KeyName.getLocalPart());
         assertEquals(1, nodeList.getLength());
-        assertEquals("CN=transmitter, OU=swssf, C=CH", nodeList.item(0).getFirstChild().getTextContent());
+        assertEquals(cert.getIssuerDN().getName(), nodeList.item(0).getFirstChild().getTextContent());
 
         // Verify using DOM
         verifyUsingDOM(document, cert, properties.getSignatureSecureParts());
