@@ -23,8 +23,10 @@ import org.apache.xml.security.stax.securityToken.SecurityTokenConstants;
 import java.security.Key;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.namespace.QName;
 
@@ -74,6 +76,8 @@ public class XMLSecurityProperties {
     private int signaturePosition = 0;
 
     private QName idAttributeNS = XMLSecurityConstants.ATT_NULL_Id;
+
+    private final Map<String, Key> keyNameMap = new HashMap<String, Key>();
     
     public XMLSecurityProperties() {
     }
@@ -108,6 +112,7 @@ public class XMLSecurityProperties {
         this.idAttributeNS = xmlSecurityProperties.idAttributeNS;
         this.signatureKeyName = xmlSecurityProperties.signatureKeyName;
         this.encryptionKeyName = xmlSecurityProperties.encryptionKeyName;
+        this.keyNameMap.putAll(xmlSecurityProperties.keyNameMap);
     }
 
     public SecurityTokenConstants.KeyIdentifier getSignatureKeyIdentifier() {
@@ -449,5 +454,14 @@ public class XMLSecurityProperties {
      */
     public void setEncryptionKeyName(String encryptionKeyName) {
         this.encryptionKeyName = encryptionKeyName;
+    }
+
+    /**
+     * returns an instance of the map that links KeyName values to actual keys
+     *
+     * @return keyNameMap set to the map containing KeyNames and Keys
+     */
+    public Map<String, Key> getKeyNameMap() {
+        return keyNameMap;
     }
 }
