@@ -28,6 +28,7 @@ import org.apache.xml.security.stax.ext.stax.XMLSecAttribute;
 import org.apache.xml.security.stax.ext.stax.XMLSecEvent;
 import org.apache.xml.security.stax.ext.stax.XMLSecNamespace;
 import org.apache.xml.security.stax.ext.stax.XMLSecStartElement;
+import org.apache.xml.security.stax.impl.processor.output.XMLSignatureEndingOutputProcessor;
 import org.apache.xml.security.stax.impl.util.ConcreteLSInput;
 import org.apache.xml.security.stax.securityEvent.*;
 import org.apache.xml.security.stax.securityToken.InboundSecurityToken;
@@ -497,4 +498,15 @@ public class XMLSecurityUtils {
         return schema;
     }
 
+    public static void createKeyNameTokenStructure(AbstractOutputProcessor abstractOutputProcessor, OutputProcessorChain outputProcessorChain, String keyName)
+            throws XMLStreamException, XMLSecurityException {
+
+        if (keyName == null || keyName.isEmpty()) {
+            throw new XMLSecurityException("stax.signature.keyNameMissing");
+        }
+
+        abstractOutputProcessor.createStartElementAndOutputAsEvent(outputProcessorChain, XMLSecurityConstants.TAG_dsig_KeyName, true, null);
+        abstractOutputProcessor.createCharactersAndOutputAsEvent(outputProcessorChain, keyName);
+        abstractOutputProcessor.createEndElementAndOutputAsEvent(outputProcessorChain, XMLSecurityConstants.TAG_dsig_KeyName);
+    }
 }
