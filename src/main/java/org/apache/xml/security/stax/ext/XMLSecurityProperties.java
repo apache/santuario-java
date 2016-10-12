@@ -22,11 +22,7 @@ import org.apache.xml.security.stax.securityToken.SecurityTokenConstants;
 
 import java.security.Key;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import javax.xml.namespace.QName;
 
@@ -457,11 +453,16 @@ public class XMLSecurityProperties {
     }
 
     /**
-     * returns an instance of the map that links KeyName values to actual keys
+     * returns an immutable instance of the map that links KeyName values to actual keys
      *
      * @return keyNameMap set to the map containing KeyNames and Keys
      */
     public Map<String, Key> getKeyNameMap() {
-        return keyNameMap;
+        return Collections.unmodifiableMap(keyNameMap);
     }
+
+    public void addKeyNameMapping(String keyname, Key key) {
+        keyNameMap.put(keyname, key);
+    }
+
 }
