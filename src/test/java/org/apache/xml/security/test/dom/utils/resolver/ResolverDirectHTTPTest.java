@@ -55,7 +55,7 @@ public class ResolverDirectHTTPTest extends Assert {
         doc.createElement("test").setAttributeNode(uri);
         try {
             ResourceResolver resolver = ResourceResolver.getInstance(uri, null, true);
-            fail("No exception thrown, but resolver found: " + resolver);
+            fail("No exception expectedException, but resolver found: " + resolver);
         } catch (ResourceResolverException e) {
             //
         }

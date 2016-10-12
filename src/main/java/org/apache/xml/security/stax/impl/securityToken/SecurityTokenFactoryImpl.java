@@ -81,31 +81,26 @@ public class SecurityTokenFactoryImpl extends SecurityTokenFactory {
         // Use a default key if it exists
         if (SecurityTokenConstants.KeyUsage_Signature_Verification.equals(keyUsage)
                 && securityProperties.getSignatureVerificationKey() != null) {
-            AbstractInboundSecurityToken token =
-                    new AbstractInboundSecurityToken(inboundSecurityContext, IDGenerator.generateID(null),
-                            SecurityTokenConstants.KeyIdentifier_NoKeyInfo, false) {
-                        @Override
-                        public TokenType getTokenType() {
-                            return SecurityTokenConstants.DefaultToken;
-                        }
-                    };
-            setTokenKey(securityProperties, keyUsage, token);
-            return token;
+            return getDefaultSecurityToken(securityProperties, inboundSecurityContext, keyUsage);
         } else if (SecurityTokenConstants.KeyUsage_Decryption.equals(keyUsage)
                 && securityProperties.getDecryptionKey() != null) {
-            AbstractInboundSecurityToken token =
-                    new AbstractInboundSecurityToken(inboundSecurityContext, IDGenerator.generateID(null),
-                            SecurityTokenConstants.KeyIdentifier_NoKeyInfo, false) {
-                        @Override
-                        public TokenType getTokenType() {
-                            return SecurityTokenConstants.DefaultToken;
-                        }
-                    };
-            setTokenKey(securityProperties, keyUsage, token);
-            return token;
+            return getDefaultSecurityToken(securityProperties, inboundSecurityContext, keyUsage);
         }
 
         throw new XMLSecurityException("stax.noKey", new Object[] {keyUsage});
+    }
+
+    private InboundSecurityToken getDefaultSecurityToken(XMLSecurityProperties securityProperties, final InboundSecurityContext inboundSecurityContext, SecurityTokenConstants.KeyUsage keyUsage) {
+        AbstractInboundSecurityToken token =
+                new AbstractInboundSecurityToken(inboundSecurityContext, IDGenerator.generateID(null),
+                        SecurityTokenConstants.KeyIdentifier_NoKeyInfo, false) {
+                    @Override
+                    public TokenType getTokenType() {
+                        return SecurityTokenConstants.DefaultToken;
+                    }
+                };
+        setTokenKey(securityProperties, keyUsage, token);
+        return token;
     }
 
     private KeyNameSecurityToken getSecurityToken(String keyName, XMLSecurityProperties securityProperties, InboundSecurityContext inboundSecurityContext,
