@@ -52,6 +52,9 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.apache.xml.security.stax.ext.XMLSecurityConstants.NS_C14N_EXCL;
+import static org.apache.xml.security.stax.ext.XMLSecurityConstants.NS_XMLDSIG_ENVELOPED_SIGNATURE;
+
 /**
  * A set of test-cases for Signature creation.
  */
@@ -852,7 +855,7 @@ public class SignatureCreationTest extends AbstractSignatureCreationTest {
         NodeList nodeList = document.getElementsByTagNameNS(XMLSecurityConstants.TAG_dsig_CanonicalizationMethod.getNamespaceURI(), XMLSecurityConstants.TAG_dsig_CanonicalizationMethod.getLocalPart());
         Assert.assertEquals(1, nodeList.getLength());
         Element element = (Element)nodeList.item(0);
-        Assert.assertEquals(XMLSecurityConstants.NS_C14N_EXCL, element.getAttribute(XMLSecurityConstants.ATT_NULL_Algorithm.getLocalPart()));
+        Assert.assertEquals(NS_C14N_EXCL, element.getAttribute(XMLSecurityConstants.ATT_NULL_Algorithm.getLocalPart()));
 
         nodeList = document.getElementsByTagNameNS(XMLSecurityConstants.TAG_dsig_Transform.getNamespaceURI(), XMLSecurityConstants.TAG_dsig_Transform.getLocalPart());
         Assert.assertEquals(1, nodeList.getLength());
@@ -920,12 +923,12 @@ public class SignatureCreationTest extends AbstractSignatureCreationTest {
         NodeList nodeList = document.getElementsByTagNameNS(XMLSecurityConstants.TAG_dsig_CanonicalizationMethod.getNamespaceURI(), XMLSecurityConstants.TAG_dsig_CanonicalizationMethod.getLocalPart());
         Assert.assertEquals(1, nodeList.getLength());
         Element element = (Element)nodeList.item(0);
-        Assert.assertEquals(XMLSecurityConstants.NS_C14N_EXCL, element.getAttribute(XMLSecurityConstants.ATT_NULL_Algorithm.getLocalPart()));
+        Assert.assertEquals(NS_C14N_EXCL, element.getAttribute(XMLSecurityConstants.ATT_NULL_Algorithm.getLocalPart()));
 
         nodeList = document.getElementsByTagNameNS(XMLSecurityConstants.TAG_dsig_Transform.getNamespaceURI(), XMLSecurityConstants.TAG_dsig_Transform.getLocalPart());
         Assert.assertEquals(1, nodeList.getLength());
         element = (Element)nodeList.item(0);
-        Assert.assertEquals(XMLSecurityConstants.NS_C14N_EXCL, element.getAttribute(XMLSecurityConstants.ATT_NULL_Algorithm.getLocalPart()));
+        Assert.assertEquals(NS_C14N_EXCL, element.getAttribute(XMLSecurityConstants.ATT_NULL_Algorithm.getLocalPart()));
 
         nodeList = document.getElementsByTagNameNS(XMLSecurityConstants.TAG_dsig_SignatureMethod.getNamespaceURI(), XMLSecurityConstants.TAG_dsig_SignatureMethod.getLocalPart());
         Assert.assertEquals(1, nodeList.getLength());
@@ -1007,7 +1010,7 @@ public class SignatureCreationTest extends AbstractSignatureCreationTest {
         X509Certificate cert = (X509Certificate)keyStore.getCertificate("transmitter");
         properties.setSignatureCerts(new X509Certificate[]{cert});
 
-        properties.setSignatureCanonicalizationAlgorithm(XMLSecurityConstants.NS_C14N_EXCL);
+        properties.setSignatureCanonicalizationAlgorithm(NS_C14N_EXCL);
         properties.setAddExcC14NInclusivePrefixes(true);
 
         SecurePart securePart =
@@ -1441,7 +1444,6 @@ public class SignatureCreationTest extends AbstractSignatureCreationTest {
         properties.setActions(actions);
         properties.setSignatureKeyIdentifier(SecurityTokenConstants.KeyIdentifier_KeyName);
         properties.setSignatureGenerateIds(false);
-        properties.setSignatureDefaultCanonicalizationTransform("http://www.w3.org/2001/10/xml-exc-c14n#");
         properties.setSignatureIncludeDigestTransform(false);
 
         // Set the key up
@@ -1458,8 +1460,8 @@ public class SignatureCreationTest extends AbstractSignatureCreationTest {
 
         SecurePart securePart =
                 new SecurePart(null, SecurePart.Modifier.Element, new String[]{
-                        "http://www.w3.org/2000/09/xmldsig#enveloped-signature",
-                        properties.getSignatureDefaultCanonicalizationTransform()
+                        NS_XMLDSIG_ENVELOPED_SIGNATURE,
+                        NS_C14N_EXCL
                 }, "http://www.w3.org/2000/09/xmldsig#sha1");
         securePart.setSecureEntireRequest(true);
         properties.addSignaturePart(securePart);

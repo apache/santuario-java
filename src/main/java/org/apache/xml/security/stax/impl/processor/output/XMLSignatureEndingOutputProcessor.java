@@ -38,6 +38,8 @@ import org.apache.xml.security.stax.securityToken.OutboundSecurityToken;
 import org.apache.xml.security.stax.securityEvent.SignatureValueSecurityEvent;
 import org.apache.xml.security.stax.securityToken.SecurityTokenConstants;
 
+import static org.apache.xml.security.stax.ext.XMLSecurityConstants.NS_XMLDSIG_ENVELOPED_SIGNATURE;
+
 /**
  * An EndingOutputProcessor for XML Signature.
  */
@@ -187,9 +189,8 @@ public class XMLSignatureEndingOutputProcessor extends AbstractSignatureEndingOu
     private boolean shouldIncludeTransform(String transform) {
         boolean include = true;
 
-        if (securityProperties.getSignatureDefaultCanonicalizationTransform() != null &&
-                !securityProperties.isSignatureIncludeDigestTransform() &&
-                transform.equals(securityProperties.getSignatureDefaultCanonicalizationTransform())) {
+        if (!securityProperties.isSignatureIncludeDigestTransform() &&
+                !transform.equals(NS_XMLDSIG_ENVELOPED_SIGNATURE)) {
             include = false;
         }
         return include;
