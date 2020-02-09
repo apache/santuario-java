@@ -37,6 +37,7 @@ import org.apache.xml.security.stax.ext.stax.XMLSecEvent;
 import org.apache.xml.security.stax.ext.stax.XMLSecEventFactory;
 import org.apache.xml.security.stax.ext.stax.XMLSecNamespace;
 import org.apache.xml.security.stax.ext.stax.XMLSecStartElement;
+import org.apache.xml.security.utils.XMLUtils;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
@@ -72,6 +73,7 @@ public abstract class AbstractOutputProcessor implements OutputProcessor {
 
     @Override
     public void init(OutputProcessorChain outputProcessorChain) throws XMLSecurityException {
+        XMLUtils.setThreadLocalBase64Parameters(securityProperties.getBase64LineLength(), securityProperties.getBase64LineSeparator());
         outputProcessorChain.addProcessor(this);
     }
 

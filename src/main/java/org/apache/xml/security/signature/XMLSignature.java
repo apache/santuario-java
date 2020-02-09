@@ -661,11 +661,6 @@ public final class XMLSignature extends SignatureElementProxy {
         }
 
         String base64codedValue = XMLUtils.encodeToString(bytes);
-
-        if (base64codedValue.length() > 76 && !XMLUtils.ignoreLineBreaks()) {
-            base64codedValue = "\n" + base64codedValue + "\n";
-        }
-
         Text t = createText(base64codedValue);
         signatureValueElement.appendChild(t);
     }

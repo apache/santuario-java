@@ -174,12 +174,7 @@ public abstract class AbstractEncryptOutputProcessor extends AbstractOutputProce
                 symmetricCipher.init(Cipher.ENCRYPT_MODE, encryptionPartDef.getSymmetricKey(), parameterSpec);
 
                 characterEventGeneratorOutputStream = new CharacterEventGeneratorOutputStream();
-                Base64OutputStream base64EncoderStream = null;
-                if (XMLUtils.isIgnoreLineBreaks()) {
-                    base64EncoderStream = new Base64OutputStream(characterEventGeneratorOutputStream, true, 0, null);
-                } else {
-                    base64EncoderStream = new Base64OutputStream(characterEventGeneratorOutputStream, true);
-                }
+                Base64OutputStream base64EncoderStream = XMLUtils.createBase64OutputStream(characterEventGeneratorOutputStream, true);
                 base64EncoderStream.write(iv);
 
                 OutputStream outputStream = new CipherOutputStream(base64EncoderStream, symmetricCipher);

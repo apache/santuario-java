@@ -18,14 +18,15 @@
  */
 package org.apache.xml.security.stax.ext;
 
-import org.apache.xml.security.stax.securityToken.SecurityTokenConstants;
-
 import java.security.Key;
 import java.security.cert.X509Certificate;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.*;
 
 import javax.xml.namespace.QName;
+
+import org.apache.xml.security.stax.securityToken.SecurityTokenConstants;
+import org.apache.xml.security.utils.XMLUtils;
 
 
 /**
@@ -80,6 +81,8 @@ public class XMLSecurityProperties {
     private QName signaturePositionQName;
     private boolean signaturePositionStart = false;
     private AlgorithmParameterSpec algorithmParameterSpec;
+    private int base64LineLength = XMLUtils.DEFAULT_BASE64_LINE_LENGTH;
+    private byte[] base64LineSeparator = XMLUtils.DEFAULT_BASE64_LINE_SEPARATOR;
 
     public XMLSecurityProperties() {
     }
@@ -120,6 +123,8 @@ public class XMLSecurityProperties {
         this.signaturePositionQName = xmlSecurityProperties.signaturePositionQName;
         this.signaturePositionStart = xmlSecurityProperties.signaturePositionStart;
         this.algorithmParameterSpec = xmlSecurityProperties.algorithmParameterSpec;
+        this.base64LineSeparator = xmlSecurityProperties.base64LineSeparator;
+        this.base64LineLength = xmlSecurityProperties.base64LineLength;
     }
 
     public boolean isSignaturePositionStart() {
@@ -538,5 +543,45 @@ public class XMLSecurityProperties {
 
     public void setAlgorithmParameterSpec(AlgorithmParameterSpec algorithmParameterSpec) {
         this.algorithmParameterSpec = algorithmParameterSpec;
+    }
+
+    /**
+     * @return the Base64 line separator, or {@code null} for no line separator.
+     */
+    public byte[] getBase64LineSeparator() {
+        return base64LineSeparator;
+    }
+
+    /**
+     * Sets the Base64 line separator to the given US-ASCII bytes.
+     * The default is CRLF.
+     * For no line separator, use the combination of {@code base64LineLength = 4} and
+     * {@code base64LineSeparator = null}.
+     *
+     * @param base64LineSeparator a Base64 line separator, or {@code null} for no line separator.
+     * @see #setBase64LineLength(int)
+     */
+    public void setBase64LineSeparator(byte[] base64LineSeparator) {
+        this.base64LineSeparator = base64LineSeparator;
+    }
+
+    /**
+     * @return the Base64 line length, possibly &le; {@code 0} for no line separator.
+     */
+    public int getBase64LineLength() {
+        return base64LineLength;
+    }
+
+    /**
+     * Sets the Base64 line length, which must be a multiple of 4.
+     * The default is 76.
+     * For no line separator, use the combination of {@code base64LineLength = 4} and
+     * {@code base64LineSeparator = null}.
+     *
+     * @param base64LineLength a Base64 line length, or {@code 0} for no line separator.
+     * @see #setBase64LineSeparator(byte[])
+     */
+    public void setBase64LineLength(int base64LineLength) {
+        this.base64LineLength = base64LineLength;
     }
 }
