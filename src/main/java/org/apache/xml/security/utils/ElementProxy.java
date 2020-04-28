@@ -292,9 +292,6 @@ public abstract class ElementProxy {
             el.appendChild(text);
 
             appendSelf(el);
-            if (!XMLUtils.ignoreLineBreaks()) {
-                appendSelf(createText("\n"));
-            }
         }
     }
 
@@ -320,9 +317,7 @@ public abstract class ElementProxy {
      */
     public void addBase64Text(byte[] bytes) {
         if (bytes != null) {
-            Text t = XMLUtils.ignoreLineBreaks()
-                ? createText(XMLUtils.encodeToString(bytes))
-                : createText("\n" + XMLUtils.encodeToString(bytes) + "\n");
+            Text t = createText(XMLUtils.encodeToString(bytes));
             appendSelf(t);
         }
     }

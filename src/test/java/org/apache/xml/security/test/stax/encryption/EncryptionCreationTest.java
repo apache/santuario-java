@@ -30,8 +30,17 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -44,6 +53,7 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 
+import org.apache.commons.codec.binary.StringUtils;
 import org.apache.xml.security.encryption.XMLCipher;
 import org.apache.xml.security.exceptions.XMLSecurityException;
 import org.apache.xml.security.stax.ext.OutboundXMLSec;
@@ -55,13 +65,20 @@ import org.apache.xml.security.stax.securityToken.SecurityTokenConstants;
 import org.apache.xml.security.test.stax.utils.XMLSecEventAllocator;
 import org.apache.xml.security.test.stax.utils.XmlReaderToWriter;
 import org.apache.xml.security.utils.XMLUtils;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
+import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -74,6 +91,10 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
  *
  */
 public class EncryptionCreationTest {
+
+    private static final byte[] LF = {10};
+    private static final byte[] CRLF = {13, 10};
+    private static final List<byte[]> LINE_SEPARATORS = Arrays.asList(CRLF, LF);
 
     private XMLInputFactory xmlInputFactory;
 
@@ -1685,6 +1706,262 @@ public class EncryptionCreationTest {
         // Check the CreditCard decrypted ok
         nodeList = doc.getElementsByTagNameNS("urn:example:po", "CreditCard");
         assertEquals(nodeList.getLength(), 1);
+    }
+
+    @Test
+    public void testDefaultBase64LineSeparatorX509KeyIdentifier() throws Exception {
+        XMLSecurityProperties properties = new XMLSecurityProperties();
+        properties.setEncryptionKeyIdentifier(SecurityTokenConstants.KeyIdentifier_X509KeyIdentifier);
+        String encrypted = encryptBase64LineSeparator(properties);
+        assertThat(encrypted, containsString("&#"));
+    }
+
+    @Test
+    public void testBase64LineSeparatorX509KeyIdentifier() throws Exception {
+        XMLSecurityProperties properties = new XMLSecurityProperties();
+        properties.setEncryptionKeyIdentifier(SecurityTokenConstants.KeyIdentifier_X509KeyIdentifier);
+        properties.setBase64LineSeparator(LF);
+        String encrypted = encryptBase64LineSeparator(properties);
+        assertThat(encrypted, not(containsString("&#")));
+    }
+
+    @Test
+    public void testBase64LineSeparatorSkiKeyIdentifier() throws Exception {
+        XMLSecurityProperties properties = new XMLSecurityProperties();
+        properties.setEncryptionKeyIdentifier(SecurityTokenConstants.KeyIdentifier_SkiKeyIdentifier);
+        properties.setBase64LineSeparator(LF);
+        String encrypted = encryptBase64LineSeparator(properties);
+        assertThat(encrypted, not(containsString("&#")));
+    }
+
+    @Test
+    public void testBase64LineSeparatorKeyValue() throws Exception {
+        XMLSecurityProperties properties = new XMLSecurityProperties();
+        properties.setEncryptionKeyIdentifier(SecurityTokenConstants.KeyIdentifier_KeyValue);
+        properties.setBase64LineSeparator(LF);
+        String encrypted = encryptBase64LineSeparator(properties);
+        assertThat(encrypted, not(containsString("&#")));
+    }
+
+    @Test
+    public void testBase64LineSeparatorNoKeyInfo() throws Exception {
+        XMLSecurityProperties properties = new XMLSecurityProperties();
+        properties.setEncryptionKeyIdentifier(SecurityTokenConstants.KeyIdentifier_NoKeyInfo);
+        properties.setBase64LineSeparator(LF);
+        String encrypted = encryptBase64LineSeparator(properties);
+        assertThat(encrypted, not(containsString("&#")));
+    }
+
+    @Test
+    public void testBase64LineSeparatorKeyName() throws Exception {
+        XMLSecurityProperties properties = new XMLSecurityProperties();
+        properties.setEncryptionKeyIdentifier(SecurityTokenConstants.KeyIdentifier_KeyName);
+        properties.setBase64LineSeparator(LF);
+        String encrypted = encryptBase64LineSeparator(properties);
+        assertThat(encrypted, not(containsString("&#")));
+    }
+
+    @Test
+    public void testBase64LineSeparatorIssuerSerial() throws Exception {
+        XMLSecurityProperties properties = new XMLSecurityProperties();
+        properties.setEncryptionKeyIdentifier(SecurityTokenConstants.KeyIdentifier_IssuerSerial);
+        properties.setBase64LineSeparator(LF);
+        String encrypted = encryptBase64LineSeparator(properties);
+        assertThat(encrypted, not(containsString("&#")));
+    }
+
+    @Test
+    public void testBase64LineSeparatorX509SubjectName() throws Exception {
+        XMLSecurityProperties properties = new XMLSecurityProperties();
+        properties.setEncryptionKeyIdentifier(SecurityTokenConstants.KeyIdentifier_X509SubjectName);
+        properties.setBase64LineSeparator(LF);
+        String encrypted = encryptBase64LineSeparator(properties);
+        assertThat(encrypted, not(containsString("&#")));
+    }
+
+    @Test
+    public void testBase64LineSeparatorEncryptedKey() throws Exception {
+        XMLSecurityProperties properties = new XMLSecurityProperties();
+        properties.setEncryptionKeyIdentifier(SecurityTokenConstants.KeyIdentifier_EncryptedKey);
+        properties.setBase64LineSeparator(LF);
+        String encrypted = encryptBase64LineSeparator(properties);
+        assertThat(encrypted, not(containsString("&#")));
+    }
+
+    private String encryptBase64LineSeparator(XMLSecurityProperties properties) throws Exception {
+        // Set the configuration up.
+        properties.addAction(XMLSecurityConstants.ENCRYPT);
+
+        // Set the key up.
+        KeyStore keyStore = KeyStore.getInstance("JCEKS");
+        keyStore.load(
+                this.getClass().getClassLoader().getResource("test.jceks").openStream(),
+                "secret".toCharArray()
+        );
+        PrivateKey privateKey = (PrivateKey)keyStore.getKey("rsakey", "secret".toCharArray());
+        properties.setEncryptionKeyTransportAlgorithm("http://www.w3.org/2001/04/xmlenc#rsa-1_5");
+        properties.setEncryptionTransportKey(privateKey);
+        properties.setEncryptionSymAlgorithm("http://www.w3.org/2001/04/xmlenc#aes256-cbc");
+
+        SecurePart securePart =
+                new SecurePart(new QName("urn:example:po", "PaymentInfo"), SecurePart.Modifier.Content);
+        properties.addEncryptionPart(securePart);
+
+        OutboundXMLSec outboundXMLSec = XMLSec.getOutboundXMLSec(properties);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        XMLStreamWriter xmlStreamWriter = outboundXMLSec.processOutMessage(baos, StandardCharsets.UTF_8.name());
+
+        InputStream sourceDocument =
+                this.getClass().getClassLoader().getResourceAsStream(
+                        "ie/baltimore/merlin-examples/merlin-xmlenc-five/plaintext.xml");
+        XMLStreamReader xmlStreamReader = xmlInputFactory.createXMLStreamReader(sourceDocument);
+
+        XmlReaderToWriter.writeAll(xmlStreamReader, xmlStreamWriter);
+        xmlStreamWriter.close();
+
+        // System.out.println("Got:\n" + new String(baos.toByteArray(), StandardCharsets.UTF_8.name()));
+        return new String(baos.toByteArray(), StandardCharsets.UTF_8);
+    }
+
+    @Test
+    @Timeout(60L)
+    public void testThreadLocalityOfBase64Parameters() throws Exception {
+        // We want to create a sweet spot of concurrent _encrypting_ as much as possible.
+        // We take some measures to improve the size of the sweet spot:
+        // Measure 1: prepare common configuration for all threads, such that they spend as little time as possible
+        // doing irrelevant work such as generating symmetric keys.
+        KeyStore keyStore = KeyStore.getInstance("JCEKS");
+        keyStore.load(
+                this.getClass().getClassLoader().getResource("test.jceks").openStream(),
+                "secret".toCharArray()
+        );
+        PrivateKey privateKey = (PrivateKey) keyStore.getKey("rsakey", "secret".toCharArray());
+        StringBuilder contentBuilder = new StringBuilder(1000);
+        contentBuilder.append("<Document>\n");
+        int elementCount = 100;
+        for (int i = 0, n = elementCount; i != n; i++) {
+            contentBuilder.append("\t<ElementToEncrypt>\n"
+                    + "\t\tLorem ipsum dolor sit amet, \n"
+                    + "\t\tconsectetur adipiscing elit, \n"
+                    + "\t\tsed do eiusmod tempor incididunt ut labore et dolore magna aliqua. \n"
+                    + "\t\tUt enim ad minim veniam, \n"
+                    + "\t\tquis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. \n"
+                    + "\t\tDuis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. \n"
+                    + "\t\tExcepteur sint occaecat cupidatat non proident, \n"
+                    + "\t\tsunt in culpa qui officia deserunt mollit anim id est laborum.\n"
+                    + "\t</ElementToEncrypt>\n");
+        }
+        contentBuilder.append("</Document>\n");
+        byte[] content = StringUtils.getBytesUtf8(contentBuilder.toString());
+//        System.out.println(contentBuilder);
+        SecurePart securePart =
+                new SecurePart(new QName("ElementToEncrypt"), SecurePart.Modifier.Content);
+        KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
+        keyGenerator.init(256);
+        SecretKey secretKey = keyGenerator.generateKey();
+
+        // Actual test with multiple concurrent encryption threads.
+        int threadCount = 10;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        AtomicReference<Exception> firstExceptionReference = new AtomicReference<>();
+        Random random = new Random();
+        try {
+            List<Future<Void>> futures = new ArrayList<>(threadCount);
+            // threadCount + 1 because this thread, which is not one of the executor threads, needs to reach the barrier too.
+            CyclicBarrier barrier = new CyclicBarrier(threadCount + 1);
+            // We want the test to fail if any exceptions happen on one of the threads.
+            // Capture the first of the off-thread exceptions and throw it at the end to make the test fail.
+            for (int i = 0, n = threadCount; i++ != n;) {
+                Runnable runnable = () -> {
+                    try {
+                        // Perform an actual test.
+                        XMLSecurityProperties properties = new XMLSecurityProperties();
+                        properties.addAction(XMLSecurityConstants.ENCRYPT);
+                        properties.setEncryptionKeyIdentifier(SecurityTokenConstants.KeyIdentifier_NoKeyInfo);
+                        properties.setEncryptionKeyTransportAlgorithm("http://www.w3.org/2001/04/xmlenc#rsa-1_5");
+                        properties.setEncryptionTransportKey(privateKey);
+                        properties.setEncryptionSymAlgorithm("http://www.w3.org/2001/04/xmlenc#aes256-cbc");
+                        // Use an explicit (common) key so that not all threads lose time generating one of their own.
+                        properties.setEncryptionKey(secretKey);
+                        properties.addEncryptionPart(securePart);
+                        // Line length must be a multiple of 4, and must be > 0.
+                        int lineLength = 4 * (random.nextInt(76 / 4 - 1) + 1);
+                        byte[] lineSeparator = LINE_SEPARATORS.get(random.nextInt(LINE_SEPARATORS.size()));
+                        properties.setBase64LineLength(lineLength);
+                        properties.setBase64LineSeparator(lineSeparator);
+                        OutboundXMLSec outboundXMLSec = XMLSec.getOutboundXMLSec(properties);
+                        ByteArrayOutputStream out = new ByteArrayOutputStream();
+                        XMLStreamWriter xmlStreamWriter = outboundXMLSec.processOutMessage(out, StandardCharsets.UTF_8.name());
+                        InputStream sourceDocument = new ByteArrayInputStream(content);
+                        XMLStreamReader xmlStreamReader = xmlInputFactory.createXMLStreamReader(sourceDocument);
+                        Pattern pattern = Arrays.equals(lineSeparator, CRLF)
+                            ? Pattern.compile("[a-zA-Z0-9+/]{" + lineLength + "}&#xd;\\n", Pattern.DOTALL)
+                            : Pattern.compile("[a-zA-Z0-9+/]{" + lineLength + "}\\n", Pattern.DOTALL);
+                        // Use a barrier to align the start times of the threads as much as possible.
+                        barrier.await();
+                        XmlReaderToWriter.writeAll(xmlStreamReader, xmlStreamWriter);
+                        xmlStreamWriter.close();
+                        String encryptedContent = new String(out.toByteArray(), StandardCharsets.UTF_8);
+//                        System.out.println("=====");
+//                        System.out.println(encryptedContent);
+                        assertThat(encryptedContent, not(containsString("Lorem ipsum dolor sit amet")));
+                        assertThat(encryptedContent, findRegex(pattern, true, elementCount));
+                    } catch (Exception e) {
+                        firstExceptionReference.compareAndSet(null, e);
+                    }
+                };
+                Future<Void> future = executor.submit(runnable, null);
+                futures.add(future);
+            }
+            barrier.await();
+            for (Future<Void> future : futures) {
+                future.get();
+            }
+        } finally {
+            executor.shutdownNow();
+            executor.awaitTermination(120L, TimeUnit.SECONDS);
+        }
+        Exception firstException = firstExceptionReference.get();
+        if (firstException != null) {
+            throw firstException;
+        }
+    }
+
+    private static boolean contains(byte[] array, byte b) {
+        for (byte a : array) {
+            if (a == b) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static Matcher<String> findRegex(Pattern pattern, boolean atLeast, int times) {
+        return new TypeSafeDiagnosingMatcher<String>() {
+
+            public void describeTo(Description description) {
+                description.appendText("a string matching the pattern ").appendValue(pattern)
+                        .appendText(atLeast ? " at least " : " ").appendValue(times).appendText(" times");
+            }
+
+            protected boolean matchesSafely(String actual, Description mismatchDescription) {
+                java.util.regex.Matcher matcher = pattern.matcher(actual);
+                boolean matches = true;
+                for (int i = 0; i++ != times;) {
+                    if (!matcher.find()) {
+                        matches = false;
+                        break;
+                    }
+                }
+                if (matches && !atLeast) {
+                    matches = !matcher.find();
+                }
+                if (!matches) {
+                    mismatchDescription.appendText("the string was ").appendValue(actual);
+                }
+                return matches;
+            }
+        };
     }
 
     /**

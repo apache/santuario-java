@@ -31,12 +31,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.codec.binary.Base64OutputStream;
 import org.apache.xml.security.c14n.CanonicalizationException;
 import org.apache.xml.security.c14n.Canonicalizer;
 import org.apache.xml.security.c14n.InvalidCanonicalizerException;
 import org.apache.xml.security.parser.XMLParser;
 import org.apache.xml.security.parser.XMLParserException;
 import org.apache.xml.security.parser.XMLParserImpl;
+import org.apache.xml.security.stax.impl.util.KeyValue;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -76,6 +78,12 @@ public final class XMLUtils {
     private static volatile String ds11Prefix = "dsig11";
     private static volatile String xencPrefix = "xenc";
     private static volatile String xenc11Prefix = "xenc11";
+
+    public static final int DEFAULT_BASE64_LINE_LENGTH = 76;
+    public static final byte[] DEFAULT_BASE64_LINE_SEPARATOR = {13, 10};
+    private static final KeyValue<Integer, byte[]> DEFAULT_BASE64_PARAMETERS = new KeyValue<>(DEFAULT_BASE64_LINE_LENGTH, DEFAULT_BASE64_LINE_SEPARATOR);
+    private static final KeyValue<Integer, byte[]> IGNORE_LINE_BREAKS_BASE64_PARAMETERS = new KeyValue<>(0, null);
+    private static final ThreadLocal<KeyValue<Integer, byte[]>> BASE64_PARAMETERS = ThreadLocal.withInitial(() -> DEFAULT_BASE64_PARAMETERS);
 
     /**
      * Constructor XMLUtils
@@ -525,10 +533,20 @@ public final class XMLUtils {
     }
 
     public static String encodeToString(byte[] bytes) {
-        if (ignoreLineBreaks) {
+        KeyValue<Integer, byte[]> base64Parameters = getEffectiveBase64Parameters();
+        int lineLength = base64Parameters.getKey();
+        byte[] lineSeparator = base64Parameters.getValue();
+        if (lineSeparator == null) {
             return Base64.getEncoder().encodeToString(bytes);
         }
-        return Base64.getMimeEncoder().encodeToString(bytes);
+        return Base64.getMimeEncoder(lineLength, lineSeparator).encodeToString(bytes);
+    }
+
+    private static KeyValue<Integer, byte[]> getEffectiveBase64Parameters() {
+        if (ignoreLineBreaks) {
+            return IGNORE_LINE_BREAKS_BASE64_PARAMETERS;
+        }
+        return BASE64_PARAMETERS.get();
     }
 
     public static byte[] decode(String encodedString) {
@@ -539,8 +557,22 @@ public final class XMLUtils {
         return Base64.getMimeDecoder().decode(encodedBytes);
     }
 
+    @Deprecated
     public static boolean isIgnoreLineBreaks() {
         return ignoreLineBreaks;
+    }
+
+    /**
+     * Creates a new Base64 output stream around a given output stream, using the thread-local Base64 parameters
+     * which were configured on this thread using {@link #setThreadLocalBase64Parameters(int, byte[])}.
+     *
+     * @param out The delegate output stream, which must not be {@code null}.
+     * @param doEncode {@code true} to encode, {@code false} to decode Base64.
+     * @return A new Base64 output stream, never {@code null}.
+     */
+    public static Base64OutputStream createBase64OutputStream(OutputStream out, boolean doEncode) {
+        KeyValue<Integer, byte[]> base64Parameters = getEffectiveBase64Parameters();
+        return new Base64OutputStream(out, true, base64Parameters.getKey(), base64Parameters.getValue());
     }
 
     /**
@@ -854,6 +886,7 @@ public final class XMLUtils {
         }
     }
 
+    @Deprecated
     public static boolean ignoreLineBreaks() {
         return ignoreLineBreaks;
     }
@@ -1050,6 +1083,16 @@ public final class XMLUtils {
         return resizedBytes;
     }
 
-
-
+    /**
+     * Sets the thread-local Base64 parameters that will be used by this thread in further calls to
+     * {@link #encodeToString(byte[])} and {@link #createBase64OutputStream(OutputStream, boolean)}.
+     * Any thread-local parameters set here will be overruled (have no effect) when the system property
+     * {@code "org.apache.xml.security.ignoreLineBreaks"} is set.
+     *
+     * @param lineLength a line length, 76 by default. Use 0 for no line separator.
+     * @param lineSeparator a line separator, CRLF {@code {13, 10}} by default. Use {@code null} for no line separator.
+     */
+    public static void setThreadLocalBase64Parameters(int lineLength, byte[] lineSeparator) {
+        BASE64_PARAMETERS.set(new KeyValue<>(lineLength, lineSeparator));
+    }
 }

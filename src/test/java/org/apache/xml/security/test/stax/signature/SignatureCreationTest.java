@@ -63,6 +63,9 @@ import org.junit.jupiter.api.Test;
 
 import static org.apache.xml.security.stax.ext.XMLSecurityConstants.NS_C14N_EXCL;
 import static org.apache.xml.security.stax.ext.XMLSecurityConstants.NS_XMLDSIG_ENVELOPED_SIGNATURE;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -1636,5 +1639,46 @@ public class SignatureCreationTest extends AbstractSignatureCreationTest {
 
         // Verify using DOM
         verifyUsingDOMWithoutIdAndDefaultTransform(document, cert.getPublicKey(), properties.getSignatureSecureParts());
+    }
+
+    @Test
+    public void testBas64LineSeparator() throws Exception {
+        byte[] lineSeparator = {10};
+        // Set up the Configuration
+        XMLSecurityProperties properties = new XMLSecurityProperties();
+        properties.setBase64LineSeparator(lineSeparator);
+        List<XMLSecurityConstants.Action> actions = new ArrayList<>();
+        actions.add(XMLSecurityConstants.SIGNATURE);
+        properties.setActions(actions);
+
+        // Set the key up
+        KeyStore keyStore = KeyStore.getInstance("jks");
+        keyStore.load(
+                this.getClass().getClassLoader().getResource("transmitter.jks").openStream(),
+                "default".toCharArray()
+        );
+        Key key = keyStore.getKey("transmitter", "default".toCharArray());
+        properties.setSignatureKey(key);
+        X509Certificate cert = (X509Certificate)keyStore.getCertificate("transmitter");
+        properties.setSignatureCerts(new X509Certificate[]{cert});
+
+        SecurePart securePart =
+                new SecurePart(new QName("urn:example:po", "PaymentInfo"), SecurePart.Modifier.Content);
+        properties.addSignaturePart(securePart);
+
+        OutboundXMLSec outboundXMLSec = XMLSec.getOutboundXMLSec(properties);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        XMLStreamWriter xmlStreamWriter = outboundXMLSec.processOutMessage(baos, StandardCharsets.UTF_8.name());
+
+        InputStream sourceDocument =
+                this.getClass().getClassLoader().getResourceAsStream(
+                        "ie/baltimore/merlin-examples/merlin-xmlenc-five/plaintext.xml");
+        XMLStreamReader xmlStreamReader = xmlInputFactory.createXMLStreamReader(sourceDocument);
+
+        XmlReaderToWriter.writeAll(xmlStreamReader, xmlStreamWriter);
+        xmlStreamWriter.close();
+
+        String signed = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+        assertThat(signed, not(containsString("&#")));
     }
 }
