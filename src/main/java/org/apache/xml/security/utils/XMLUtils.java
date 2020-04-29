@@ -772,17 +772,8 @@ public final class XMLUtils {
      * @return nodes with the constrain
      */
     public static Set<Node> excludeNodeFromSet(Node signatureElement, Set<Node> inputSet) {
-        Set<Node> resultSet = new HashSet<>();
-        Iterator<Node> iterator = inputSet.iterator();
-
-        while (iterator.hasNext()) {
-            Node inputNode = iterator.next();
-
-            if (!XMLUtils.isDescendantOrSelf(signatureElement, inputNode)) {
-                resultSet.add(inputNode);
-            }
-        }
-        return resultSet;
+        return inputSet.parallelStream().filter((inputNode) ->
+                !XMLUtils.isDescendantOrSelf(signatureElement, inputNode)).collect(Collectors.toSet());
     }
 
     /**
