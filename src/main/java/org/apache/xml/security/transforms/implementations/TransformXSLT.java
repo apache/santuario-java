@@ -160,11 +160,7 @@ public class TransformXSLT extends TransformSpi {
             output.setSecureValidation(secureValidation);
             output.setOutputStream(baos);
             return output;
-        } catch (XMLSecurityException ex) {
-            throw new TransformationException(ex);
-        } catch (TransformerConfigurationException ex) {
-            throw new TransformationException(ex);
-        } catch (TransformerException ex) {
+        } catch (XMLSecurityException | TransformerException ex) {
             throw new TransformationException(ex);
         }
     }
