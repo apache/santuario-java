@@ -106,7 +106,7 @@ public class OutputProcessorChainTest {
 
     @Test
     public void testAddProcessorPhase1() {
-        OutputProcessorChainImpl outputProcessorChain = new OutputProcessorChainImpl(new OutboundSecurityContextImpl());
+        OutputProcessorChainImpl outputProcessorChain = new OutputProcessorChainImpl(new OutboundSecurityContextImpl(new XMLSecurityProperties()));
 
         AbstractOutputProcessor outputProcessor1 = new AbstractOutputProcessor() {
         };
@@ -127,7 +127,7 @@ public class OutputProcessorChainTest {
 
     @Test
     public void testAddProcessorPhase2() {
-        OutputProcessorChainImpl outputProcessorChain = new OutputProcessorChainImpl(new OutboundSecurityContextImpl());
+        OutputProcessorChainImpl outputProcessorChain = new OutputProcessorChainImpl(new OutboundSecurityContextImpl(new XMLSecurityProperties()));
 
         AbstractOutputProcessor outputProcessor1 = new AbstractOutputProcessor() {
         };
@@ -167,7 +167,7 @@ public class OutputProcessorChainTest {
 
     @Test
     public void testAddProcessorBefore1() {
-        OutputProcessorChainImpl outputProcessorChain = new OutputProcessorChainImpl(new OutboundSecurityContextImpl());
+        OutputProcessorChainImpl outputProcessorChain = new OutputProcessorChainImpl(new OutboundSecurityContextImpl(new XMLSecurityProperties()));
 
         AbstractOutputProcessor outputProcessor1 = new AbstractOutputProcessor() {
         };
@@ -210,7 +210,7 @@ public class OutputProcessorChainTest {
 
     @Test
     public void testAddProcessorAfter1() {
-        OutputProcessorChainImpl outputProcessorChain = new OutputProcessorChainImpl(new OutboundSecurityContextImpl());
+        OutputProcessorChainImpl outputProcessorChain = new OutputProcessorChainImpl(new OutboundSecurityContextImpl(new XMLSecurityProperties()));
 
         AbstractOutputProcessor outputProcessor1 = new AbstractOutputProcessor() {
         };
@@ -253,7 +253,7 @@ public class OutputProcessorChainTest {
 
     @Test
     public void testAddProcessorBeforeAndAfter1() {
-        OutputProcessorChainImpl outputProcessorChain = new OutputProcessorChainImpl(new OutboundSecurityContextImpl());
+        OutputProcessorChainImpl outputProcessorChain = new OutputProcessorChainImpl(new OutboundSecurityContextImpl(new XMLSecurityProperties()));
 
         AbstractOutputProcessor outputProcessor1 = new AbstractOutputProcessor() {
         };
